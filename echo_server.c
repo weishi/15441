@@ -22,10 +22,45 @@
 #define ECHO_PORT 9999
 #define BUF_SIZE 4096
 
-int close_socket(int sock)
+int openSocket(int);
+int closeSocket(int);
+
+int openSocket(int port)
 {
-    if (close(sock))
-    {
+    int sock;
+    int optval=1;
+    struct sockaddr_in addr;
+    /* all networked programs must create a socket */
+    if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
+        fprintf(stderr, "Failed creating socket.\n");
+        return EXIT_FAILURE;
+    }
+
+    if(setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,(const void *)&optval, sizeof(int)) < 0) {
+        return EXIT_FAILURE;
+    }
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = INADDR_ANY;
+
+    /* servers bind sockets to ports---notify the OS they accept connections */
+    if (bind(sock, (struct sockaddr *) &addr, sizeof(addr))) {
+        closeSocket(sock);
+        fprintf(stderr, "Failed binding socket.\n");
+        return EXIT_FAILURE;
+    }
+    if (listen(sock, 5)<0) {
+        closeSocket(sock);
+        fprintf(stderr, "Error listening on socket.\n");
+        return EXIT_FAILURE;
+    }
+    return sock;
+}
+
+
+int closeSocket(int sock)
+{
+    if (close(sock)) {
         fprintf(stderr, "Failed closing socket.\n");
         return 1;
     }
@@ -37,81 +72,52 @@ int main(int argc, char* argv[])
     int sock, client_sock;
     ssize_t readret;
     socklen_t cli_size;
-    struct sockaddr_in addr, cli_addr;
+    struct sockaddr_in cli_addr;
     char buf[BUF_SIZE];
-
     fprintf(stdout, "----- Echo Server -----\n");
-    
-    /* all networked programs must create a socket */
-    if ((sock = socket(PF_INET, SOCK_STREAM, 0)) == -1)
-    {
-        fprintf(stderr, "Failed creating socket.\n");
-        return EXIT_FAILURE;
-    }
 
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(ECHO_PORT);
-    addr.sin_addr.s_addr = INADDR_ANY;
-
-    /* servers bind sockets to ports---notify the OS they accept connections */
-    if (bind(sock, (struct sockaddr *) &addr, sizeof(addr)))
-    {
-        close_socket(sock);
-        fprintf(stderr, "Failed binding socket.\n");
-        return EXIT_FAILURE;
-    }
-
-
-    if (listen(sock, 5))
-    {
-        close_socket(sock);
-        fprintf(stderr, "Error listening on socket.\n");
-        return EXIT_FAILURE;
+    sock=openSocket(ECHO_PORT);
+    if(sock<0) {
+        return sock;
     }
 
     /* finally, loop waiting for input and then write it back */
-    while (1)
-    {
-       cli_size = sizeof(cli_addr);
-       if ((client_sock = accept(sock, (struct sockaddr *) &cli_addr,
-                                 &cli_size)) == -1)
-       {
-           close(sock);
-           fprintf(stderr, "Error accepting connection.\n");
-           return EXIT_FAILURE;
-       }
-       
-       readret = 0;
+    while (1) {
+        cli_size = sizeof(cli_addr);
+        if ((client_sock = accept(sock, (struct sockaddr *) &cli_addr,
+                                  &cli_size)) == -1) {
+            close(sock);
+            fprintf(stderr, "Error accepting connection.\n");
+            return EXIT_FAILURE;
+        }
 
-       while((readret = recv(client_sock, buf, BUF_SIZE, 0)) > 1)
-       {
-           if (send(client_sock, buf, readret, 0) != readret)
-           {
-               close_socket(client_sock);
-               close_socket(sock);
-               fprintf(stderr, "Error sending to client.\n");
-               return EXIT_FAILURE;
-           }
-           memset(buf, 0, BUF_SIZE);
-       } 
+        readret = 0;
 
-       if (readret == -1)
-       {
-           close_socket(client_sock);
-           close_socket(sock);
-           fprintf(stderr, "Error reading from client socket.\n");
-           return EXIT_FAILURE;
-       }
+        while((readret = recv(client_sock, buf, BUF_SIZE, 0)) > 1) {
+            if (send(client_sock, buf, readret, 0) != readret) {
+                closeSocket(client_sock);
+                closeSocket(sock);
+                fprintf(stderr, "Error sending to client.\n");
+                return EXIT_FAILURE;
+            }
+            memset(buf, 0, BUF_SIZE);
+        }
 
-       if (close_socket(client_sock))
-       {
-           close_socket(sock);
-           fprintf(stderr, "Error closing client socket.\n");
-           return EXIT_FAILURE;
-       }
+        if (readret == -1) {
+            closeSocket(client_sock);
+            closeSocket(sock);
+            fprintf(stderr, "Error reading from client socket.\n");
+            return EXIT_FAILURE;
+        }
+
+        if (closeSocket(client_sock)) {
+            closeSocket(sock);
+            fprintf(stderr, "Error closing client socket.\n");
+            return EXIT_FAILURE;
+        }
     }
 
-    close_socket(sock);
+    closeSocket(sock);
 
     return EXIT_SUCCESS;
 }
