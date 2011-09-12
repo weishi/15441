@@ -9,22 +9,12 @@
 ################################################################################
 
 CC=gcc
-CFLAGS=-Wall -Werror -Wextra -Wshadow -Wunreachable-code -g -D_FORTIFY_SOURCE=2
-SOURCE=src
-OBJECTS=$(SOURCE)/lisod.o $(SOURCE)/selectEngine.o
+CFLAGS=-Wall -Werror -g
+OBJECTS=lisod.o selectEngine.o linkedList.o httpHandler.o
 
-default: echo_server echo_client lisod
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-lisod: $(OBJECTS)
-	$(CC) $(CFLAGS) -o lisod $(OBJECTS)
-
-echo_server:
-	gcc echo_server.c -o echo_server -Wall -Werror
-
-
-echo_client:
-	gcc echo_client.c -o echo_client -Wall -Werror
 
 clean:
-	rm -f echo_server echo_client lisod
-	rm $(SOURCE)/*.o
+	@rm lisod

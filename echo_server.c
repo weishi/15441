@@ -6,8 +6,7 @@
 *              sent to it by connected clients.  It does not support          *
 *              concurrent clients.                                            *
 *                                                                             *
-* Authors: Athula Balachandran <abalacha@cs.cmu.edu>,                         *
-*          Wolf Richter <wolf@cs.cmu.edu>                                     *
+* Authors: Wei Shi <weishi@andrew.cmu.edu>                                    *
 *                                                                             *
 *******************************************************************************/
 
