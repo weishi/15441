@@ -54,7 +54,7 @@ void removeNode(DLL *list, Node *deadNode)
     list->size--;
 }
 
-Node *searchList( DLL *list, void *target )
+Node *searchList( DLL list, void *target )
 {
     Node *ref;
     if (list.head == NULL) {
@@ -76,7 +76,18 @@ Node *searchList( DLL *list, void *target )
 
 }
 
-void *getNode(DLL *list, int index)
+void *getNodeDataAt(DLL *list, int index)
+{
+    Node *ref = getNodeAt(list, index);
+    return (ref == NULL) ? NULL : ref->data;
+}
+
+void removeNodeAt(DLL *list, int index)
+{
+    removeNode(list, getNodeAt(list, index));
+}
+
+Node *getNodeAt(DLL *list, int index)
 {
     if(index < 0 || index >= list->size) {
         return NULL;
@@ -86,13 +97,14 @@ void *getNode(DLL *list, int index)
         for(i = 0; i < index; i++) {
             ref = ref->next;
         }
-        return ref->data;
+        return ref;
     }
 }
 
+
 int compareInt(void *data1, void *data2)
 {
-    return (int)(data1) - (int)(data2);
+    return (int)((intptr_t)data1 - (intptr_t)data2);
 }
 
 void freeInt(void *data)

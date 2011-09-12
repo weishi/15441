@@ -14,20 +14,26 @@
 
 typedef struct selectEngine {
     int port;
-    char* logFile;
+    char *logFile;
     int (*newConnHandler)(int);
+    int (*oldConnHandler)(int);
     int (*closeConnHandler)(int);
+
 } selectEngine;
 
-void initEngine(selectEngine* engine,
+void initEngine(selectEngine *engine,
                 int port,
-                char* logFile,
+                char *logFile,
                 int (*newConnHandler)(int),
+                int (*oldConnHandler)(int),
                 int (*closeConnHandler)(int) );
 
-int startEngine(selectEngine*);
-void listenSocket(selectEngine*, int listenFd);
+int startEngine(selectEngine);
+int listenSocket(selectEngine, int listenFd);
 int openSocket(int);
 int closeSocket(int);
+
+void createPool(DLL list, fd_set *pool, int *maxSocket);
+void handlePool(DLL *list, fd_set *pool, selectEngine engine);
 
 #endif

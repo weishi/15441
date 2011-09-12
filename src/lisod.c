@@ -10,17 +10,24 @@
 
 #include "lisod.h"
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     int port;
+    char *logFile;
     selectEngine engine;
-    if(argc < 3) {
-        printf(USAGE,argv[0]);
+    if(argc != 3) {
+        printf(USAGE, argv[0]);
         return EXIT_FAILURE;
     }
 
     port = atoi(argv[1]);
-    initEngine(&engine, port, NULL, NULL, NULL);
+    logFile=argv[2];
+    initEngine(&engine,
+               port,
+               logFile,
+               newConnectionHandler,
+               oldConnectionHandler,
+               closeConnectionHandler);
     fprintf(stdout, "----- Echo Server -----\n");
-    return startEngine(&engine);
+    return startEngine(engine);
 }

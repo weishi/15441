@@ -1,3 +1,5 @@
+#ifndef LISOD_H
+#define LISOD_H
 
 #include <netinet/in.h>
 #include <netinet/ip.h>
@@ -10,6 +12,7 @@
 #include "selectEngine.h"
 
 #define ECHO_PORT 9999
-#define BUF_SIZE 4096
 
-#define USAGE "\nUsage: %s <port>\n"
+#define USAGE "\nUsage: %s <port> <logFile>\n"
+
+#endif

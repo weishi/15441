@@ -11,7 +11,7 @@
 CC=gcc
 CFLAGS=-Wall -Werror -Wextra -Wshadow -Wunreachable-code -g -D_FORTIFY_SOURCE=2
 SOURCE=src
-OBJECTS=$(SOURCE)/lisod.o $(SOURCE)/selectEngine.o
+OBJECTS=$(SOURCE)/lisod.o $(SOURCE)/selectEngine.o $(SOURCE)/linkedList.o $(SOURCE)/httpHandler.o
 
 default: echo_server echo_client lisod
 

@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 typedef struct Node {
     void *data;
@@ -26,12 +27,15 @@ void initList(DLL *list,
 void insertNode(DLL *list, void *data);
 
 void removeNode(DLL *list, Node *target);
+void removeNodeAt(DLL *list, int index);
 
-Node *searchList(DLL *list, void *data);
+Node *searchList(DLL list, void *data);
 
-Node *getNode(DLL *list, int index);
+void *getNodeDataAt(DLL *list, int index);
 
+Node *getNodeAt(DLL *list, int index);
 
+    
 int compareInt(void *data1, void *data2);
 void freeInt(void *data);
 

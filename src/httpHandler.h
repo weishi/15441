@@ -5,8 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
+
+#define CLOSE_ME -1
+#define BUF_SIZE 1024
+
 
 int newConnectionHandler(int);
+int oldConnectionHandler(int);
 int closeConnectionHandler(int);
-
 #endif
