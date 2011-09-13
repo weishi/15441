@@ -16,16 +16,16 @@ void initEngine(selectEngine *engine,
     engine->closeConnHandler = closeConnHandler;
 }
 
-int startEngine(selectEngine engine)
+int startEngine(selectEngine *engine)
 {
-    int listenFd = openSocket(engine.port);
+    int listenFd = openSocket(engine->port);
     if(listenFd < 0) {
         return EXIT_FAILURE;
     }
     return listenSocket(engine, listenFd);
 }
 
-int listenSocket(selectEngine engine, int listenFd)
+int listenSocket(selectEngine *engine, int listenFd)
 {
     int maxSocket = listenFd;
     int numReady;
@@ -35,7 +35,7 @@ int listenSocket(selectEngine engine, int listenFd)
     insertNode(&socketList, (void *)((intptr_t)listenFd));
     while(1) {
         fprintf(stderr, "Selecting...\n");
-        createPool(socketList, &pool, &maxSocket);
+        createPool(&socketList, &pool, &maxSocket);
         numReady = select(maxSocket + 1, &pool, NULL, NULL, NULL);
         if(numReady < 0) {
             fprintf(stderr, "Select Error\n");
@@ -48,7 +48,7 @@ int listenSocket(selectEngine engine, int listenFd)
     }
 }
 
-void handlePool(DLL *list, fd_set *pool, selectEngine engine)
+void handlePool(DLL *list, fd_set *pool, selectEngine *engine)
 {
     int numPool = list->size;
     int *closedPool = malloc(numPool * sizeof(int));
@@ -62,21 +62,23 @@ void handlePool(DLL *list, fd_set *pool, selectEngine engine)
         int listenfd = (intptr_t)getNodeDataAt(list, 0);
         /* Accept potential new connection */
         if(FD_ISSET(listenfd, pool)) {
-            int status = engine.newConnHandler(listenfd);
+            int status = engine->newConnHandler(listenfd);
             if(status >= 0) {
                 newSocket = status;
             } else {
                 fprintf(stderr, "cannot accept new Conn\n");
             }
         }
-        /* Handle existing connection */
+        /* Handle existing connections */
+        printf("Total Existing [%d]\n",numPool);
         for(i = 1; i < numPool; i++) {
             int fd = (intptr_t)getNodeDataAt(list, i);
             if(FD_ISSET(fd, pool)) {
-                int status = engine.oldConnHandler(fd);
+                int status = engine->oldConnHandler(fd);
                 if(status == CLOSE_ME) {
                     closedPool[numClosed++] = i;
                 }
+                printf("Existing [%d]\n",fd);
             }
         }
         /* Remove closed connection from pool */
@@ -94,20 +96,22 @@ void handlePool(DLL *list, fd_set *pool, selectEngine engine)
 
 }
 
-void createPool(DLL list, fd_set *pool, int *maxSocket)
+void createPool(DLL *list, fd_set *pool, int *maxSocket)
 {
     int max = -1;
-    Node *ref = list.head;
+    Node *ref = list->head;
     if(ref == NULL) {
         return;
     } else {
+        int i;
         FD_ZERO(pool);
-        do {
-            int fd = (intptr_t)ref->data;
+        for(i=0;i<list->size;i++){
+            int fd = (intptr_t)getNodeDataAt(list, i);
             FD_SET(fd, pool);
             max = (fd > max) ? fd : max;
-            ref = ref->next;
-        } while(ref != NULL);
+            printf("[%d],",fd);
+        }
+        printf(" Max = %d\n",max);
     }
     *maxSocket = max;
 }

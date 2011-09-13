@@ -29,5 +29,5 @@ int main(int argc, char *argv[])
                oldConnectionHandler,
                closeConnectionHandler);
     fprintf(stdout, "----- Echo Server -----\n");
-    return startEngine(engine);
+    return startEngine(&engine);
 }

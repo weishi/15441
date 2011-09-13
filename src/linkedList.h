@@ -29,7 +29,7 @@ void insertNode(DLL *list, void *data);
 void removeNode(DLL *list, Node *target);
 void removeNodeAt(DLL *list, int index);
 
-Node *searchList(DLL list, void *data);
+Node *searchList(DLL *list, void *data);
 
 void *getNodeDataAt(DLL *list, int index);
 

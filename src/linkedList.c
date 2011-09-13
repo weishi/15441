@@ -54,23 +54,23 @@ void removeNode(DLL *list, Node *deadNode)
     list->size--;
 }
 
-Node *searchList( DLL list, void *target )
+Node *searchList( DLL *list, void *target )
 {
     Node *ref;
-    if (list.head == NULL) {
+    if (list->head == NULL) {
         return NULL;
     }
-    if ((list).compare(list.head->data, target) != 0) {
-        ref = (list.head)->next;
-        while(list.head != ref) {
-            if ((list).compare(ref->data, target) == 0) {
+    if (list->compare(list->head->data, target) != 0) {
+        ref = (list->head)->next;
+        while(list->head != ref) {
+            if (list->compare(ref->data, target) == 0) {
                 return ref;
             } else {
                 ref = ref->next;
             }
         }
     } else {
-        return list.head;
+        return list->head;
     }
     return NULL;
 

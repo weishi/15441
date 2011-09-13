@@ -28,12 +28,12 @@ void initEngine(selectEngine *engine,
                 int (*oldConnHandler)(int),
                 int (*closeConnHandler)(int) );
 
-int startEngine(selectEngine);
-int listenSocket(selectEngine, int listenFd);
+int startEngine(selectEngine *);
+int listenSocket(selectEngine *, int listenFd);
 int openSocket(int);
 int closeSocket(int);
 
-void createPool(DLL list, fd_set *pool, int *maxSocket);
-void handlePool(DLL *list, fd_set *pool, selectEngine engine);
+void createPool(DLL *, fd_set *, int *);
+void handlePool(DLL *, fd_set *, selectEngine *);
 
 #endif
