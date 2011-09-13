@@ -30,13 +30,18 @@ int listenSocket(selectEngine *engine, int listenFd)
     int maxSocket = listenFd;
     int numReady;
     DLL socketList;
+    
+    struct timeval timeout;
+    timeout.tv_sec=1;
+    timeout.tv_usec=0;
+    
     fd_set pool;
     initList(&socketList, compareInt, freeInt);
     insertNode(&socketList, (void *)((intptr_t)listenFd));
     while(1) {
         fprintf(stderr, "Selecting...\n");
         createPool(&socketList, &pool, &maxSocket);
-        numReady = select(maxSocket + 1, &pool, NULL, NULL, NULL);
+        numReady = select(maxSocket + 1, &pool, NULL, NULL, &timeout);
         if(numReady < 0) {
             fprintf(stderr, "Select Error\n");
             return EXIT_FAILURE;
@@ -61,7 +66,9 @@ void handlePool(DLL *list, fd_set *pool, selectEngine *engine)
         int numClosed = 0;
         int listenfd = (intptr_t)getNodeDataAt(list, 0);
         /* Accept potential new connection */
+        printf("HandlePool: Try new Conn\n");
         if(FD_ISSET(listenfd, pool)) {
+            printf("HandlePool: -- Get new Conn\n");
             int status = engine->newConnHandler(listenfd);
             if(status >= 0) {
                 newSocket = status;
@@ -71,7 +78,7 @@ void handlePool(DLL *list, fd_set *pool, selectEngine *engine)
             }
         }
         /* Handle existing connections */
-        printf("Total Existing [%d]\n",numPool);
+        printf("HandlePool: Total Existing [%d]\n",numPool);
         for(i = 1; i < numPool; i++) {
             int fd = (intptr_t)getNodeDataAt(list, i);
             printf("Existing [%d]\n",fd);

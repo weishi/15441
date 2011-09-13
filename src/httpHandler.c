@@ -20,19 +20,25 @@ int oldConnectionHandler(int connFd)
     ssize_t readret = 0;
     char buf[BUF_SIZE];
 
-    while((readret = recv(connFd, buf, BUF_SIZE, 0)) > 1) {
-        if (send(connFd, buf, readret, 0) != readret) {
-            fprintf(stderr, "Error sending to client.\n");
+    while(1) {
+        readret = recv(connFd, buf, BUF_SIZE, 0);
+        if(readret == -1 && errno == EAGAIN) {
+            break;
+        }else if (readret == -1) {
+            fprintf(stderr, "Error reading from client socket.\n");
             return CLOSE_ME;
+        }else if(readret == 0){
+            return CLOSE_ME;
+        }else{
+            if (send(connFd, buf, readret, 0) != readret) {
+                fprintf(stderr, "Error sending to client.\n");
+                return CLOSE_ME;
+            }
+            memset(buf, 0, BUF_SIZE);
+            printf("Read %d\n", (int)readret);
         }
-        memset(buf, 0, BUF_SIZE);
-        printf("Read %d\n",(int)readret);
     }
 
-    if (readret == -1) {
-        fprintf(stderr, "Error reading from client socket.\n");
-        return CLOSE_ME;
-    }
     fprintf(stderr, "Old Connection [%d]\n", connFd);
 
     return EXIT_SUCCESS;
