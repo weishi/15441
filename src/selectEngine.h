@@ -36,4 +36,6 @@ int closeSocket(int);
 void createPool(DLL *, fd_set *, int *);
 void handlePool(DLL *, fd_set *, selectEngine *);
 
+void setNonBlocking(int);
+
 #endif

@@ -65,6 +65,7 @@ void handlePool(DLL *list, fd_set *pool, selectEngine *engine)
             int status = engine->newConnHandler(listenfd);
             if(status >= 0) {
                 newSocket = status;
+                setNonBlocking(newSocket);
             } else {
                 fprintf(stderr, "cannot accept new Conn\n");
             }
@@ -73,12 +74,13 @@ void handlePool(DLL *list, fd_set *pool, selectEngine *engine)
         printf("Total Existing [%d]\n",numPool);
         for(i = 1; i < numPool; i++) {
             int fd = (intptr_t)getNodeDataAt(list, i);
+            printf("Existing [%d]\n",fd);
             if(FD_ISSET(fd, pool)) {
+                printf("Active Existing [%d]\n",fd);
                 int status = engine->oldConnHandler(fd);
                 if(status == CLOSE_ME) {
                     closedPool[numClosed++] = i;
                 }
-                printf("Existing [%d]\n",fd);
             }
         }
         /* Remove closed connection from pool */
@@ -116,6 +118,20 @@ void createPool(DLL *list, fd_set *pool, int *maxSocket)
     *maxSocket = max;
 }
 
+void setNonBlocking(int connFd){
+    int flag = fcntl(connFd, F_GETFL);
+    if(flag < 0){
+        fprintf(stderr, "Failed to get non blocking\n");
+        return;
+    }else{
+        flag |= O_NONBLOCK;
+        if(fcntl(connFd, F_SETFL, flag)<0){
+            fprintf(stderr, "Failed to set non blocking\n");
+            return;
+        }
+    }
+}
+
 int openSocket(int port)
 {
     int sock;
@@ -133,6 +149,9 @@ int openSocket(int port)
                   sizeof(int)) < 0) {
         return EXIT_FAILURE;
     }
+    
+    setNonBlocking(sock);
+
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = INADDR_ANY;

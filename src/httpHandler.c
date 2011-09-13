@@ -20,12 +20,13 @@ int oldConnectionHandler(int connFd)
     ssize_t readret = 0;
     char buf[BUF_SIZE];
 
-    while((readret = recv(connFd,buf, BUF_SIZE, 0)) > 1) {
+    while((readret = recv(connFd, buf, BUF_SIZE, 0)) > 1) {
         if (send(connFd, buf, readret, 0) != readret) {
             fprintf(stderr, "Error sending to client.\n");
             return CLOSE_ME;
         }
         memset(buf, 0, BUF_SIZE);
+        printf("Read %d\n",(int)readret);
     }
 
     if (readret == -1) {
@@ -38,6 +39,6 @@ int oldConnectionHandler(int connFd)
 }
 int closeConnectionHandler(int closeFd)
 {
-    closeFd=closeFd;
+    closeFd = closeFd;
     return EXIT_SUCCESS;
 }

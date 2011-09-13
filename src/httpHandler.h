@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <fcntl.h>
 
 #define CLOSE_ME -1
 #define BUF_SIZE 1024
