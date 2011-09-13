@@ -89,6 +89,7 @@ void handlePool(DLL *list, fd_set *pool, selectEngine engine)
         if(newSocket >= 0) {
             insertNode(list, (void *)((intptr_t)newSocket));
         }
+        free(closedPool);
     }
 
 }
