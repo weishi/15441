@@ -1,4 +1,4 @@
-#ifndef HTTPHANDLER_H 
+#ifndef HTTPHANDLER_H
 #define HTTPHANDLER_H
 
 #include <stdio.h>
@@ -9,12 +9,13 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include "connObj.h"
 
-#define CLOSE_ME -1
 #define BUF_SIZE 1024
 
 
-int newConnectionHandler(int);
-int oldConnectionHandler(int);
-int closeConnectionHandler(int);
+int newConnectionHandler(connObj *);
+void readConnectionHandler(connObj *);
+void writeConnectionHandler(connObj *);
+int closeConnectionHandler(connObj *);
 #endif

@@ -26,7 +26,8 @@ int main(int argc, char *argv[])
                port,
                logFile,
                newConnectionHandler,
-               oldConnectionHandler,
+               readConnectionHandler,
+               writeConnectionHandler,
                closeConnectionHandler);
     fprintf(stdout, "----- Echo Server -----\n");
     return startEngine(&engine);

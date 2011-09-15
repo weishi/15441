@@ -16,12 +16,14 @@ typedef struct DLL {
     int size;
     int (*compare)(void *, void *);
     void (*freeData)(void *);
+    int (*map)(void *);
 } DLL;
 
 
 void initList(DLL *list,
               int (*compare)(void *, void *),
-              void (*freeData)(void *)
+              void (*freeData)(void *),
+              int (*map)(void *data)
              );
 
 void insertNode(DLL *list, void *data);
@@ -32,10 +34,10 @@ void removeNodeAt(DLL *list, int index);
 Node *searchList(DLL *list, void *data);
 
 void *getNodeDataAt(DLL *list, int index);
-
 Node *getNodeAt(DLL *list, int index);
 
-    
+void mapNode(DLL *list);
+
 int compareInt(void *data1, void *data2);
 void freeInt(void *data);
 

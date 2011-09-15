@@ -2,12 +2,14 @@
 
 void initList(DLL *list,
               int (*compare)(void *, void *),
-              void (*freeData)(void *))
+              void (*freeData)(void *),
+              int (*map)(void *data))
 {
     list->head = NULL;
     list->size = 0;
     list->compare = compare;
     list->freeData = freeData;
+    list->map = map;
 }
 
 void insertNode(DLL *list, void *data)
@@ -101,6 +103,20 @@ Node *getNodeAt(DLL *list, int index)
     }
 }
 
+void mapNode(DLL *list)
+{
+    Node *ref = list->head;
+    if(list->map == NULL) {
+        return;
+    }
+    while(ref != NULL) {
+        Node *next = ref->next;
+        if(!list->map(ref->data)) {
+            removeNode(list, ref);
+        }
+        ref = next;
+    }
+}
 
 int compareInt(void *data1, void *data2)
 {

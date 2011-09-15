@@ -4,15 +4,17 @@
 void initEngine(selectEngine *engine,
                 int port,
                 char *logFile,
-                int (*newConnHandler)(int),
-                int (*oldConnHandler)(int),
-                int (*closeConnHandler)(int) )
+                int (*newConnHandler)(connObj *),
+                void (*readConnHandler)(connObj *),
+                void (*writeConnHandler)(connObj *),
+                int (*closeConnHandler)(connObj *) )
 {
 
     engine->port = port;
     engine->logFile = logFile;
     engine->newConnHandler = newConnHandler;
-    engine->oldConnHandler = oldConnHandler;
+    engine->readConnHandler = readConnHandler;
+    engine->writeConnHandler = writeConnHandler;
     engine->closeConnHandler = closeConnHandler;
 }
 
@@ -30,82 +32,72 @@ int listenSocket(selectEngine *engine, int listenFd)
     int maxSocket = listenFd;
     int numReady;
     DLL socketList;
-    
+
     struct timeval timeout;
-    timeout.tv_sec=1;
-    timeout.tv_usec=0;
-    
-    fd_set pool;
-    initList(&socketList, compareInt, freeInt);
-    insertNode(&socketList, (void *)((intptr_t)listenFd));
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
+
+    fd_set readPool, writePool;
+    initList(&socketList, compareConnObj, freeConnObj, mapConnObj);
+    insertNode(&socketList, createConnObj(listenFd, 0));
     while(1) {
         fprintf(stderr, "Selecting...\n");
-        createPool(&socketList, &pool, &maxSocket);
-        numReady = select(maxSocket + 1, &pool, NULL, NULL, &timeout);
+        createPool(&socketList, &readPool, &writePool, &maxSocket);
+        numReady = select(maxSocket + 1, &readPool, &writePool, NULL, NULL);
         if(numReady < 0) {
             fprintf(stderr, "Select Error\n");
             return EXIT_FAILURE;
         } else if(numReady == 0 ) {
             fprintf(stdout, "Select Idle\n");
         } else {
-            handlePool(&socketList, &pool, engine);
+            handlePool(&socketList, &readPool, &writePool,  engine);
         }
     }
 }
 
-void handlePool(DLL *list, fd_set *pool, selectEngine *engine)
+void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, selectEngine *engine)
 {
     int numPool = list->size;
-    int *closedPool = malloc(numPool * sizeof(int));
     if(numPool <= 0) {
         fprintf(stderr, "List error\n");
         return;
     } else {
         int i = 0;
-        int newSocket = -1;
-        int numClosed = 0;
-        int listenfd = (intptr_t)getNodeDataAt(list, 0);
+        connObj *connPtr;
+        /* Handle existing connections */
+        printf("HandlePool: Total Existing [%d]\n", numPool);
+        for(i = 1; i < numPool; i++) {
+            connPtr = getNodeDataAt(list, i);
+            int connFd = getConnObjSocket(connPtr);
+            printf("Existing [%d] ", connFd);
+            if(FD_ISSET(connFd, readPool)) {
+                printf("Active RD [%d] ", connFd);
+                engine->readConnHandler(connPtr);
+            }
+            if(FD_ISSET(connFd, writePool)) {
+                printf("Active WR [%d] ", connFd);
+                engine->writeConnHandler(connPtr);
+            }
+            printf("\n");
+        }
         /* Accept potential new connection */
-        printf("HandlePool: Try new Conn\n");
-        if(FD_ISSET(listenfd, pool)) {
-            printf("HandlePool: -- Get new Conn\n");
-            int status = engine->newConnHandler(listenfd);
-            if(status >= 0) {
-                newSocket = status;
-                setNonBlocking(newSocket);
+        connPtr = getNodeDataAt(list, 0);
+        int listenFd = getConnObjSocket(connPtr);
+        if(FD_ISSET(listenFd, readPool)) {
+            int status = engine->newConnHandler(connPtr);
+            if(status > 0) {
+                insertNode(list, createConnObj(status, BUF_SIZE));
             } else {
                 fprintf(stderr, "cannot accept new Conn\n");
             }
         }
-        /* Handle existing connections */
-        printf("HandlePool: Total Existing [%d]\n",numPool);
-        for(i = 1; i < numPool; i++) {
-            int fd = (intptr_t)getNodeDataAt(list, i);
-            printf("Existing [%d]\n",fd);
-            if(FD_ISSET(fd, pool)) {
-                printf("Active Existing [%d]\n",fd);
-                int status = engine->oldConnHandler(fd);
-                if(status == CLOSE_ME) {
-                    closedPool[numClosed++] = i;
-                }
-            }
-        }
-        /* Remove closed connection from pool */
-        for(i = 0; i < numClosed; i++) {
-            int closeFd=closedPool[i];
-            removeNodeAt(list,closeFd);
-            closeSocket(closeFd);
-        }
-        /* Add new connection to pool */
-        if(newSocket >= 0) {
-            insertNode(list, (void *)((intptr_t)newSocket));
-        }
-        free(closedPool);
+        /* Remove closed connections from list */
+        mapNode(list);
     }
 
 }
 
-void createPool(DLL *list, fd_set *pool, int *maxSocket)
+void createPool(DLL *list, fd_set *readPool, fd_set *writePool, int *maxSocket)
 {
     int max = -1;
     Node *ref = list->head;
@@ -113,29 +105,29 @@ void createPool(DLL *list, fd_set *pool, int *maxSocket)
         return;
     } else {
         int i;
-        FD_ZERO(pool);
-        for(i=0;i<list->size;i++){
-            int fd = (intptr_t)getNodeDataAt(list, i);
-            FD_SET(fd, pool);
-            max = (fd > max) ? fd : max;
-            printf("[%d],",fd);
+        FD_ZERO(readPool);
+        FD_ZERO(writePool);
+        /* Add listening socket */
+        connObj *connPtr = getNodeDataAt(list, 0);
+        int connFd = getConnObjSocket(connPtr);
+        FD_SET(connFd, readPool);
+        max = connFd;
+        /* Add client socket */
+        for(i = 1; i < list->size; i++) {
+            connPtr = getNodeDataAt(list, i);
+            connFd = getConnObjSocket(connPtr);
+            if(!isFullConnObj(connPtr)) {
+                FD_SET(connFd, readPool);
+                max = (connFd > max) ? connFd : max;
+            }
+            if(!isEmptyConnObj(connPtr)) {
+                FD_SET(connFd, writePool);
+                max = (connFd > max) ? connFd : max;
+            }
+            printf("[%d]", connFd);
         }
-        printf(" Max = %d\n",max);
-    }
-    *maxSocket = max;
-}
-
-void setNonBlocking(int connFd){
-    int flag = fcntl(connFd, F_GETFL);
-    if(flag < 0){
-        fprintf(stderr, "Failed to get non blocking\n");
-        return;
-    }else{
-        flag |= O_NONBLOCK;
-        if(fcntl(connFd, F_SETFL, flag)<0){
-            fprintf(stderr, "Failed to set non blocking\n");
-            return;
-        }
+        printf(" Max = %d\n", max);
+        *maxSocket = max;
     }
 }
 
@@ -156,8 +148,6 @@ int openSocket(int port)
                   sizeof(int)) < 0) {
         return EXIT_FAILURE;
     }
-    
-    setNonBlocking(sock);
 
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);

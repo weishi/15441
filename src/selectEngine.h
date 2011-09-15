@@ -15,27 +15,28 @@
 typedef struct selectEngine {
     int port;
     char *logFile;
-    int (*newConnHandler)(int);
-    int (*oldConnHandler)(int);
-    int (*closeConnHandler)(int);
+    int (*newConnHandler)(connObj *);
+    void (*readConnHandler)(connObj *);
+    void (*writeConnHandler)(connObj *);
+    int (*closeConnHandler)(connObj *);
 
 } selectEngine;
 
 void initEngine(selectEngine *engine,
                 int port,
                 char *logFile,
-                int (*newConnHandler)(int),
-                int (*oldConnHandler)(int),
-                int (*closeConnHandler)(int) );
+                int (*newConnHandler)(connObj *),
+                void (*readConnHandler)(connObj *),
+                void (*writeConnHandler)(connObj *),
+                int (*closeConnHandler)(connObj *) );
 
 int startEngine(selectEngine *);
 int listenSocket(selectEngine *, int listenFd);
 int openSocket(int);
 int closeSocket(int);
 
-void createPool(DLL *, fd_set *, int *);
-void handlePool(DLL *, fd_set *, selectEngine *);
+void createPool(DLL *, fd_set *, fd_set *, int *);
+void handlePool(DLL *, fd_set *, fd_set *, selectEngine *);
 
-void setNonBlocking(int);
 
 #endif

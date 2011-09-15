@@ -1,50 +1,64 @@
 
 #include "httpHandler.h"
 
-int newConnectionHandler(int listenFd)
+int newConnectionHandler(connObj *connPtr)
 {
     struct sockaddr_in clientAddr;
     socklen_t clientLength = sizeof(clientAddr);
+    int listenFd = getConnObjSocket(connPtr);
     int newFd = accept(listenFd, (struct sockaddr *)&clientAddr, &clientLength);
     if(newFd == -1) {
         fprintf(stderr, "Error accepting socket.\n");
-        return CLOSE_ME;
+        return -1;
     } else {
-        fprintf(stderr, "New Connection [%d]\n", newFd);
         return newFd;
     }
 }
 
-int oldConnectionHandler(int connFd)
+void readConnectionHandler(connObj *connPtr)
 {
-    ssize_t readret = 0;
-    char buf[BUF_SIZE];
+    if(!isFullConnObj(connPtr)) {
+        char *buf;
+        ssize_t size;
+        int connFd = getConnObjSocket(connPtr);
+        ssize_t readret = 0;
+        getConnObjReadBuffer(connPtr, &buf, &size);
 
-    while(1) {
-        readret = recv(connFd, buf, BUF_SIZE, 0);
-        if(readret == -1 && errno == EAGAIN) {
-            break;
-        }else if (readret == -1) {
+        readret = recv(connFd, buf, size, 0);
+        if (readret == -1) {
             fprintf(stderr, "Error reading from client socket.\n");
-            return CLOSE_ME;
-        }else if(readret == 0){
-            return CLOSE_ME;
-        }else{
-            if (send(connFd, buf, readret, 0) != readret) {
-                fprintf(stderr, "Error sending to client.\n");
-                return CLOSE_ME;
-            }
-            memset(buf, 0, BUF_SIZE);
-            printf("Read %d\n", (int)readret);
+            setConnObjClose(connPtr);
+            return;
+        } else if(readret == 0) {
+            fprintf(stdout, "[%d] Close",connFd);
+            setConnObjClose(connPtr);
+            return;
+        } else {
+            setConnObjReadSize(connPtr,readret);
         }
     }
 
-    fprintf(stderr, "Old Connection [%d]\n", connFd);
-
-    return EXIT_SUCCESS;
 }
-int closeConnectionHandler(int closeFd)
+
+
+void writeConnectionHandler(connObj *connPtr)
 {
-    closeFd = closeFd;
+    char *buf;
+    ssize_t size;
+    int connFd = getConnObjSocket(connPtr);
+    getConnObjWriteBuffer(connPtr, &buf, &size);
+    if (send(connFd, buf, size, 0) != size) {
+        fprintf(stderr, "Error sending to client.\n");
+        setConnObjClose(connPtr);
+    } else {
+        setConnObjWriteSize(connPtr, size);
+    }
+
+}
+
+
+int closeConnectionHandler(connObj *connPtr)
+{
+    connPtr = connPtr;
     return EXIT_SUCCESS;
 }
