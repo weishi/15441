@@ -1,12 +1,9 @@
-/******************************************************************************
-* lisod.c                                                                     *
-*                                                                             *
-* Description: This file contains the C source code for an echo server.  The  *
-*              server supports concurrent clients with select()               *
-*                                                                             *
-* Authors: Wei Shi <weishi@andrew.cmu.edu>                                    *
-*                                                                             *
-*******************************************************************************/
+/*
+ *  This file contains the C source code for an echo server.
+ *  The server supports concurrent clients with select()
+ *  
+ *  Wei Shi <weishi@andrew.cmu.edu>
+ */
 
 #include "lisod.h"
 
@@ -21,7 +18,7 @@ int main(int argc, char *argv[])
     }
 
     port = atoi(argv[1]);
-    logFile=argv[2];
+    logFile = argv[2];
     initEngine(&engine,
                port,
                logFile,
@@ -29,6 +26,5 @@ int main(int argc, char *argv[])
                readConnectionHandler,
                writeConnectionHandler,
                closeConnectionHandler);
-    fprintf(stdout, "----- Echo Server -----\n");
     return startEngine(&engine);
 }

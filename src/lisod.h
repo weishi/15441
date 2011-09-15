@@ -11,8 +11,6 @@
 
 #include "selectEngine.h"
 
-#define ECHO_PORT 9999
-
 #define USAGE "\nUsage: %s <port> <logFile>\n"
 
 #endif
