@@ -1,0 +1,26 @@
+# Test methods
+
++ Correctness test
+
+    Use a telnet client to connect to server. Type some string in terminal and
+    see if the echoed the string matches the input string.
+
+    Run test script with reasonable parameters.
+
++ Memory leak test
+           
+    Run server with valgrind. Initial multiple connections with test script.
+    After script exits, kill the server to see if there are **definitely lost**
+    memory blocks.
+                  
++ Evil test
+
+    Initial multiple connections with test script. Kill the test script while
+    it is still running. See if the server cleans up the closed sockets and
+    buffers. Also use valgrind to make sure no memory leak in this case.
+
+ + Stress test
+                          
+   Initial a huge amount of connections and trials with test scripts. Let the
+   server runs for a long time (~10min). See how the server behaves under high
+   load and check if test script still returns success.
