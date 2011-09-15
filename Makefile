@@ -8,16 +8,28 @@
 #                                                                              #
 ################################################################################
 
+define build-cmd
+$(CC) $(CLFAGS) $< -o $@
+endef
+
 CC=gcc
 CFLAGS=-Wall -Werror -Wextra -Wshadow -Wunreachable-code -g -D_FORTIFY_SOURCE=2
 SOURCE=src
-OBJECTS=$(SOURCE)/lisod.o $(SOURCE)/selectEngine.o $(SOURCE)/linkedList.o $(SOURCE)/httpHandler.o
+VPATH=$(SOURCE)
+OBJECTS = lisod.o
+OBJECTS += selectEngine.o
+OBJECTS += linkedList.o
+OBJECTS += httpHandler.o
+OBJECTS += connObj.o
 
 default: lisod
 
 lisod: $(OBJECTS)
 	$(CC) $(CFLAGS) -o lisod $(OBJECTS)
 
+$(SOURCE)/%.o: %.c
+	$(build-cmd)
+
 clean:
 	rm -f lisod
-	rm $(SOURCE)/*.o
+	rm ./*.o
