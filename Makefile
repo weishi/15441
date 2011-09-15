@@ -1,12 +1,8 @@
-################################################################################
-# Makefile                                                                     #
-#                                                                              #
-# Description: This file contains the make rules for Recitation 1.             #
-#                                                                              #
-# Authors: Athula Balachandran <abalacha@cs.cmu.edu>,                          #
-#          Wolf Richter <wolf@cs.cmu.edu>                                      #
-#                                                                              #
-################################################################################
+#
+# Makefile for Project 1
+#
+# Wei Shi <weishi@andrew.cmu.edu>
+#
 
 define build-cmd
 $(CC) $(CLFAGS) $< -o $@
