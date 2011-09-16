@@ -46,9 +46,8 @@ int listenSocket(selectEngine *engine, int listenFd)
         numReady = select(maxSocket + 1, &readPool, &writePool, NULL, NULL);
         if(numReady < 0) {
             fprintf(stderr, "Select Error\n");
-            return EXIT_FAILURE;
         } else if(numReady == 0 ) {
-            fprintf(stdout, "Select Idle\n");
+            fprintf(stderr, "Select Idle\n");
         } else {
             handlePool(&socketList, &readPool, &writePool,  engine);
         }
