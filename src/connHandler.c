@@ -1,5 +1,5 @@
 
-#include "httpHandler.h"
+#include "connHandler.h"
 
 int newConnectionHandler(connObj *connPtr)
 {
@@ -14,6 +14,23 @@ int newConnectionHandler(connObj *connPtr)
         return newFd;
     }
 }
+
+void processConnectionHandler(connObj *connPtr){
+    char *buf;
+    ssize_t size;
+    getConnObjReadBuffer(connPtr, &buf, &size);
+    switch(httpParse(connObj->req, buf, size)){
+        case Parsing:
+            return;
+        case Parsed:
+            
+        case ParseError:
+            setConnObjClose(connPtr);
+        default:
+    }
+}
+
+
 
 void readConnectionHandler(connObj *connPtr)
 {
@@ -36,6 +53,7 @@ void readConnectionHandler(connObj *connPtr)
         } else {
             setConnObjReadSize(connPtr,readret);
         }
+
     }
 
 }

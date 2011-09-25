@@ -15,8 +15,10 @@ VPATH=$(SOURCE)
 OBJECTS = lisod.o
 OBJECTS += selectEngine.o
 OBJECTS += linkedList.o
-OBJECTS += httpHandler.o
+OBJECTS += connHandler.o
 OBJECTS += connObj.o
+OBJECTS += httpParser.o
+
 
 default: lisod
 

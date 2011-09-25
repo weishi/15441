@@ -6,6 +6,7 @@ void initEngine(selectEngine *engine,
                 char *logFile,
                 int (*newConnHandler)(connObj *),
                 void (*readConnHandler)(connObj *),
+                void (*processConnHandler)(connObj *),
                 void (*writeConnHandler)(connObj *),
                 int (*closeConnHandler)(connObj *) )
 {
@@ -14,6 +15,7 @@ void initEngine(selectEngine *engine,
     engine->logFile = logFile;
     engine->newConnHandler = newConnHandler;
     engine->readConnHandler = readConnHandler;
+    engine->processConnHandler= processConnHandler;
     engine->writeConnHandler = writeConnHandler;
     engine->closeConnHandler = closeConnHandler;
 }
@@ -72,6 +74,7 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, selectEngine *en
             if(FD_ISSET(connFd, readPool)) {
                 printf("Active RD [%d] ", connFd);
                 engine->readConnHandler(connPtr);
+                engine->processConnHandler(connPtr);
             }
             if(FD_ISSET(connFd, writePool)) {
                 printf("Active WR [%d] ", connFd);

@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "httpParser.h"
 
 typedef struct connObj {
     int connFd;
@@ -14,6 +15,7 @@ typedef struct connObj {
     ssize_t maxSize;
     int isOpen;
     char *buffer;
+    requestObj *req;
 } connObj;
 
 

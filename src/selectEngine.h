@@ -9,7 +9,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "httpHandler.h"
+#include "connHandler.h"
 #include "linkedList.h"
 
 typedef struct selectEngine {
@@ -17,6 +17,7 @@ typedef struct selectEngine {
     char *logFile;
     int (*newConnHandler)(connObj *);
     void (*readConnHandler)(connObj *);
+    void (*processConnHandler)(connObj *),
     void (*writeConnHandler)(connObj *);
     int (*closeConnHandler)(connObj *);
 
@@ -27,6 +28,7 @@ void initEngine(selectEngine *engine,
                 char *logFile,
                 int (*newConnHandler)(connObj *),
                 void (*readConnHandler)(connObj *),
+                void (*processConnHandler)(connObj *),
                 void (*writeConnHandler)(connObj *),
                 int (*closeConnHandler)(connObj *) );
 

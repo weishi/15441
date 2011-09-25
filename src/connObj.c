@@ -28,6 +28,7 @@ connObj *createConnObj(int connFd, ssize_t bufferSize)
     newObj->maxSize = bufferSize;
     newObj->isOpen = 1;
     newObj->buffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
+    newObj->req=createRequestObj();
     return newObj;
 }
 

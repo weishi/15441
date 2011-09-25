@@ -25,6 +25,7 @@ void initList(DLL *list,
               void (*freeData)(void *),
               int (*map)(void *data)
              );
+void freeList(DLL *list);
 
 void insertNode(DLL *list, void *data);
 

@@ -12,6 +12,15 @@ void initList(DLL *list,
     list->map = map;
 }
 
+void freeList(DLL* list){
+    if(list!=NULL){
+        while(size>0){
+            removeNodeAt(list, 0);
+        }
+        free(list);
+    }
+}
+
 void insertNode(DLL *list, void *data)
 {
     Node *new = malloc(sizeof(Node));
