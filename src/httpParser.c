@@ -188,9 +188,13 @@ int isValidRequest(requestObj *req)
             return 1;
         }
     case HEAD:
-        return 1;
     case GET:
-        return 1;
+        char *host = getValueByKey(req, "host");
+        if(host == NULL) {
+            return 0;
+        } else {
+            return 1;
+        }
     case UNIMPLEMENTED:
     default:
         return 0;

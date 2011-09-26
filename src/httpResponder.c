@@ -1,281 +1,197 @@
 #include "httpParser.h"
 
-methodTable = {
-    {GET, "GET"},
-    {HEAD, "HEAD"},
-    {POST, "POST"},
-};
-
-requestObj *createRequestObj()
+responseObj *createResponseObj()
 {
-    requestObj *newObj = malloc(sizeof(requestObj));
-    newObj->method = UNIMPLEMENTED;
-    newObj->uri = NULL;
-    newObj->version = NULL;
+    responseObj *newObj = malloc(sizeof(responseObj));
     newObj->header = malloc(sizeof(DLL));
     initList(newObj->header, NULL, NULL, NULL);
-    newObj->content = NULL;
-    newObj->contentSize = 0;
-    newObj->statusCode = 0;
-    newObj->curState = requestLine;
-    newObj->buffer = NULL;
-    newObj->bufSize = 0;
+    newObj->statusLine = NULL;
+    newObj->file = NULL;
+    newObj->headerBuf = NULL;
+    newObj->close = 0;
     return newObj;
 }
-void freeRequestObj(requestObj *req)
+
+void buildResponseObj(responseObj *res, requestObj *req)
 {
-    free(uri);
-    free(content);
-    free(buffer);
-    freeList(header);
-    free(req);
+    int errorFlag = addStatusLine(res, req);
+    DLL *header = res->header;
+    /* Add general headers */
+    char *dateStr = getHTTPDate(time(0));
+    insertNode(header, newHeaderEntry("date", datestr));
+    free(dateStr);
+
+    insertNode(header, newHeaderEntry("server", "Liso/1.0"));
+
+    insertNode(header, newHeaderEntry("content-encoding", "identity"));
+
+
+    if(errorFlag == 1) {
+        /* Serve Error request */
+        insertNode(header, newHeaderEntry("connection", "close"));
+        res->close = 1;
+    } else {
+        switch(req->method) {
+        case POST:
+        case GET:
+            res->fileBuffer = calloc(res->fileLength + 1, sizeof(char));
+            fread(res->file, res->fileLength, 1, res->fileBuffer);
+        case HEAD:
+            char *valBuf;
+            char *valPtr;
+            //Connection
+            *valPtr = getValueByKey(req, "connection");
+            if(valPtr != NULL && strcmp(valPtr, "close") == 0) {
+                insertNode(header, newHeaderEntry("connection", "close"));
+                res->close = 1;
+            }
+            //Location
+            valPtr = getValueByKey(req, "host");
+            valBuf = malloc(strlen(res->filePath) + strlen(valPtr) + 1);
+            strcpy(locationBuf, valPtr);
+            strcat(locationBuf, filePath);
+            insertNode(header, newHeaderEntry("location", valBuf));
+            free(valBuf);
+            //Content-length
+            valBuf = malloc(512);
+            itoa(res->fileLength, valBuf, 10);
+            insertNode(header, newHeaderEntry("content-length", valBuf));
+            free(valBuf);
+            //Content-type
+            insertNode(header, newHeaderEntry("content-type", res->fileType));
+            //Last-modified
+            insertNode(header, newHeaderEntry("last-modified", res->fileLastMod));
+            break;
+        default:
+        }
+        //fill up headerBuffer
+        //Combine header + file buffer
+
+    }
 }
 
-
-Status httpParse(requestObj *req, char **bufPtr, size_t *size)
+char *getHTTPDate(time_t tmraw)
 {
-    if(req == NULL) {
-        return ParseError;
-    }
-    size_t curSize = *size;
-    char *buf = *bufPtr;
-    char *bufEnd = buf + curSize;
-    char *thisPtr = buf;
-    char *nextPtr;
-    size_t parsedSize;
-    while(1) {
-        if(req->curState == content) {
-            nextPtr = bufEnd + 1;
-        } else {
-            nextPtr = nextToken(thisPtr);
-        }
-        if(nextPtr != NULL) {
-            parsedSize = (size_t)(nextPtr - thisPtr);
-            httpParseLine(req, thisPtr, parsedSize, &parsedSize);
-        } else {
-            break;
-        }
-        if(req->curState == requestError) {
-            break;
-        }
-        /* Prepare for next line */
-        thisPtr = thisPtr + parsedSize;
-        if(thisPtr > bufEnd) {
-            break;
-        }
-    }
-    /* clean up parsed buffer */
-    if(thisPtr > bufEnd) {
-        *size = 0;
-    } else {
-        size_t newSize = bufEnd - thisPtr;
-        memmove(buf, thisPtr, newSize);
-        *bufPtr = realloc(buf, newSize);
-        *size = newSize;
-    }
-    /* Set return status */
+    char *dateStr = malloc(256);
+    struct tm ctm = *gmtime(&tmraw);
+    strftime(datestr, sizeof(datestr), "%a, %d %b %Y %H:%M:%S %Z", &ctm);
+    return dateStr;
+}
+
+int addStatusLine(responseObj *res, requestObj *req)
+{
+    int errorFlag = 0;
+    // 1.request error
+    char *sl = res->statusLine;
+    sl = "HTTP/1.1 200 OK";
     if(req->curState == requestError) {
-        return ParseError;
-    } else if(req->curState == requestDone) {
-        return Parsed;
+        errorFlag = 1;
+        switch((StatusCode)req->statsCode) {
+        case BAD_REQUEST:
+            sl = "HTTP/1.1 400 BAD REQUEST";
+            break;
+        case NOT_FOUND:
+            sl = "HTTP/1.1 404 NOT FOUND";
+        case LENGTH_REQUIRED:
+            sl = "HTTP/1.1 411 LENGTH REQUIRED";
+            break;
+        case INTERNAL_SERVER_ERROR:
+            sl = "HTTP/1.1 500 INTERNAL SERVER ERROR";
+            break;
+        case NOT_IMPLEMENTED:
+            sl = "HTTP/1.1 501 NOT IMPLEMENTED";
+            break;
+        case SERVICE_UNAVAILABLE:
+            sl = "HTTP/1.1 503 SERVICE UNAVAILABLE";
+            break;
+        case HTTP_VERSION_NOT_SUPPORTED:
+            sl = "HTTP/1.1 505 HTTP VERSION NOT SUPPORTED";
+            break;
+        default:
+            sl = "HTTP/1.1 500 INTERNAL SERVER ERROR";
+            break;
+        }
+    }
+    // 2.file error
+    if(prepareFile(req, res) == -1) {
+        errorFlag = 1;
+        sl = "HTTP/1.1 404 FILE NOT FOUND";
+    }
+    return errorFlag;
+}
+
+
+void freeResponseObj(responseObj *res)
+{
+    free(res);
+}
+
+int prepareFile(requestObj *req, responseObj *res)
+{
+    char *uri = req->uri;
+    char *path;
+    char *location
+    struct stat fileStat;
+    if(uri[strlen(uri)-1] == '/') {
+        location = createPath(wwwFolder, uri, "index.html");
+        path = createPath(NULL, uri, "index.html");
     } else {
-        return Parsing;
+        location = createPath(wwwFolder, uri, NULL);
+        path = createPath(NULL, uri, NULL);
     }
-
-
-}
-
-void httpParseLine(requestObj *req, char *line, size_t lineSize, size_t *parsedSize)
-{
-    switch(req->curState) {
-    case requestLine:
-        char *method = malloc(lineSize);
-        char *uri = malloc(lineSize);
-        int version;
-        if(sscanf(line, "%s %s HTTP/1.%d\r\n", method, uri, version) != 3) {
-            setRequestError(req, BAD_REQUEST);
-        } else {
-            int numMethods = sizeof(methodTable) / sizeof(methodEntry);
-            int i;
-            for(i = 0; i < numMethods; i++) {
-                if(strcmp(methodTable[i].s, method) == 0) {
-                    req->method = methodTable[i].m;
-                    break;
-                }
-            }
-            if(req->method == UNIMPLEMENTED) {
-                setRequestError(req, NOT_IMPLEMENTED);
-            } else if(version != 1) {
-                setRequestError(req, HTTP_VERSION_NOT_SUPPORTED);
-            } else {
-                realloc(uri, strlen(uri) + 1);
-                req->uri = uri;
-                req->version = version;
-                req->curState = headerLine;
-            }
-        }
-        /* Clean up */
-        free(method);
-        if(req->curState == requestError) {
-            free(uri);
-        }
-        break;
-    case headerLine:
-        if(strcmp(line, "\r\n") == 0) {
-            if(isValidRequest(req)) {
-                if(req->method == GET || req->method == HEAD) {
-                    req->curState = requestDone;
-                } else if(req->method == POST) {
-                    req->curState = content;
-                } else {
-                    req->curState = requestError;
-                }
-            } else {
-                setRequestError(req, LENGTH_REQUIRED);
-            }
-        } else {
-            char *key = malloc(lineSize);
-            char *value = malloc(lineSize);
-            if(sscanf(line, "%[a-zA-Z0-9-]:%[^\r\n]", key, value) != 2) {
-                setRequestError(req, BAD_REQUEST);
-            } else {
-                realloc(key, strlen(key) + 1);
-                realloc(value, strlen(value) + 1);
-                insertNode(req->header, newHeaderEntry(key, value));
-            }
-            free(key);
-            free(value);
-        }
-        break;
-    case content:
-        char *lengthStr = getValueByKey(req, "content-length");
-        int length = atoi(lengthStr);
-        int curLength = req->contentLength;
-        if(curLength == length) {
-            req->curState = requestDone;
-        }
-        if(length - curLength <= size) {
-            size_t readSize = length - curLength;
-            req->content = realloc(req->content, length);
-            memcpy(req->content + curLength, line, readSize);
-            req->contentLength = length;
-            req->curState = requestDone;
-            *parsedSize = readSize;
-        } else {
-            realloc(req->content, curLength + size);
-            memcpy(req->content + curLength, line, size);
-            req->contentLength = curLength + size;
-            req->curState = content;
-        }
-        break;
-    case requestError:
-    case requestDone:
-    default:
+    if(stat(path, &fileStat) != 0) {
+        return -1;
     }
-}
-
-int isValidRequest(requestObj *req)
-{
-    if(req->curState == requestError) {
-        return 0;
-    }
-    switch(req->method) {
-    case POST:
-        char *length = getValueByKey(req, "content-length");
-        if(length == NULL) {
-            return 0;
-        } else {
-            return 1;
-        }
-    case HEAD:
-        return 1;
-    case GET:
-        return 1;
-    case UNIMPLEMENTED:
-    default:
-        return 0;
-    }
-}
-
-void strLower(char *str)
-{
-    if(str != NULL) {
-        int i = strlen(str) - 1;
-        for(; i >= 0; i--) {
-            str[i] = tolower(str[i]);
-        }
-    }
-}
-
-headerEntry newHeaderEntry(char *key, char *value)
-{
-    if(key == NULL) {
-        return NULL;
-    }
-    headerEntry *hd = malloc(sizeof(headerEntry));
-    char *thisKey = malloc(strlen(key) + 1);
-    char *thisValue = NULL;
-    strcpy(thisKey, key);
-    if(value != NULL) {
-        thisValue = malloc(strlen(value) + 1);
-        strcpy(thisValue, value);
-    }
-    hd->key = strLower(thisKey);
-    hd->value = thisValue;
-    return hd;
-}
-
-void freeHeaderEntry(headerEntry *hd)
-{
-    if(hd != NULL) {
-        free(hd->key);
-        free(hd->value);
-        free(hd);
-    }
-}
-
-char *getValueByKey(requestObj *req, char *key)
-{
-    headerEntry *target = newHeaderEntry(key, NULL);
-    headerEntry *result = searchList(req->header, target);
-    freeHeaderEntry(target);
-
-    if(result == NULL) {
-        return NULL;
+    res->file = fopen(path, "r");
+    if(res->file == NULL) {
+        return -1;
     } else {
-        return result->value;
+        res->filePath = location;
+        res->fileLastMod = getHTTPDate(fileStat.st_mtime);
+        fseek(res->file, 0, SEEK_END);
+        res->fileLength = ftell(res->file);
+        rewind(res->file);
+        res->fileType = getFileType(path);
     }
 }
-void setRequestError(requestObj *req, StatusCode code)
-{
-    req->curState = requestError;
-    req->statusCode = (int)code;
-}
 
-char *nextToken(char *buf)
+
+char *getFileType(char *path)
 {
-    char *next = strstr(buf, "\r\n");
-    if(next == NULL) {
-        return NULL;
+    if(strlen(path) < 4) {
+        return "no/type";
     } else {
-        return next + 2;
+        char *ext = strrchr(path, '.');
+        if(strcmp(ext, ".html") == 0) {
+            return "text/html";
+        }
+        if(strcmp(ext, ".css") == 0) {
+            return "text/css";
+        }
+        if(strcmp(ext, ".png") == 0) {
+            return "image/png";
+        }
+        if(strcmp(ext, ".jpeg") == 0) {
+            return "image/jpeg";
+        }
+        return "other/type";
     }
+
 }
 
-void addBuffer(requestObj *req, char *buf, size_t size)
+char *createPath(char *dir, char *path, char *fileName)
 {
-    if(req->bufSize == 0) {
-        req->buffer = malloc(size);
-        req->bufSize = size;
-        memcpy(req->buffer, buf, size);
-
-    } else {
-        size_t oldSize = req->bufSize;
-        char *newBuf = malloc(size + oldSize);
-        memcpy(newBuf, req->buffer, oldSize);
-        memcpy(newBuf + oldSize, buf, size);
-        free(req->buffer);
-        req->buffer = newBuf;
-        req->bufSize = size + oldSize;
-    }
+    int dirLength = (dir == NULL) ? 0 : strlen(dir);
+    int pathLength = (path == NULL) ? 0 : strlen(path);
+    int fileLength = (fileName == NULL) ? 0 : strlen(fileName);
+    char *fullPath = malloc(dirLength + pathLength + fileLength + 1);
+    strcpy(fullPath, dir);
+    strcat(fullPath, path);
+    strcat(fullPath, fileName);
+    return fullPath;
 }
+
+
+
+
+
