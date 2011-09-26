@@ -32,6 +32,7 @@ responseObj *createResponseObj();
 void freeResponseObj(responseObj *);
 size_t writeResponse(responseObj *res, char *buf, size_t size);
 void buildResponseObj(responseObj *, requestObj *);
+int toClose(responseObj *);
 
 /* Private methods */
 void fillHeader(responseObj *);

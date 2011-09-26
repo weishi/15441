@@ -16,6 +16,7 @@
 
 int newConnectionHandler(connObj *);
 void readConnectionHandler(connObj *);
+void processConnectionHandler(connObj *);
 void writeConnectionHandler(connObj *);
 int closeConnectionHandler(connObj *);
 #endif

@@ -8,14 +8,19 @@
 #include <string.h>
 
 #include "httpParser.h"
+#include "httpResponder.h"
 
 typedef struct connObj {
     int connFd;
-    ssize_t curSize;
-    ssize_t maxSize;
+    ssize_t curReadSize;
+    ssize_t maxReadSize;
+    ssize_t curWriteSize;
+    ssize_t maxWriteSize;
     int isOpen;
-    char *buffer;
+    char *readBuffer;
+    char *writeBuffer;
     requestObj *req;
+    responseObj *res;
 } connObj;
 
 
@@ -29,11 +34,14 @@ connObj *createConnObj();
 /* Getters and Setters */
 int getConnObjSocket(connObj *);
 void getConnObjReadBuffer(connObj *, char **, ssize_t *);
-void getConnObjWriteBuffer(connObj *, char **, ssize_t *);
+void getConnObjWriteBufferForRead(connObj *, char **, ssize_t *);
+void getConnObjWriteBufferForWrite(connObj *, char **, ssize_t *);
 
 void setConnObjClose(connObj *);
-void setConnObjReadSize(connObj *, ssize_t);
-void setConnObjWriteSize(connObj *, ssize_t);
+void addConnObjReadSize(connObj *, ssize_t);
+void removeConnObjReadSize(connObj *, ssize_t);
+void addConnObjWriteSize(connObj *, ssize_t);
+void removeConnObjWriteSize(connObj *, ssize_t);
 
 int isFullConnObj(connObj *);
 int isEmptyConnObj(connObj *);

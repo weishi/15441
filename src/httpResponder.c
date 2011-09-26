@@ -124,10 +124,14 @@ size_t writeResponse(responseObj *res, char *buf, size_t maxSize)
     memcpy(buf + hdPart, res->fileBuffer, fdPart);
     res->headerPtr += hdPart;
     res->filePtr += fdPart;
-    
+
     return hdPart + fdPart;
 }
 
+int toClose(responseObj *res)
+{
+    return res->close;
+}
 
 char *getHTTPDate(time_t tmraw)
 {

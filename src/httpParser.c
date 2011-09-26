@@ -13,7 +13,7 @@ requestObj *createRequestObj()
     newObj->uri = NULL;
     newObj->version = NULL;
     newObj->header = malloc(sizeof(DLL));
-    initList(newObj->header, NULL, NULL, NULL);
+    initList(newObj->header, compareHeaderEntry, freeHeaderEntry, NULL);
     newObj->content = NULL;
     newObj->contentSize = 0;
     newObj->statusCode = 0;
@@ -32,12 +32,13 @@ void freeRequestObj(requestObj *req)
 }
 
 
-Status httpParse(requestObj *req, char **bufPtr, size_t *size)
+Status httpParse(requestObj *req, char **bufPtr, ssize_t *size)
 {
-    if(req == NULL) {
-        return ParseError;
+    if(req == NULL || req->curState ==requestDone) {
+        *size=0
+        return Parsed;
     }
-    size_t curSize = *size;
+    ssize_t curSize = *size;
     char *buf = *bufPtr;
     char *bufEnd = buf + curSize;
     char *thisPtr = buf;
@@ -65,13 +66,8 @@ Status httpParse(requestObj *req, char **bufPtr, size_t *size)
         }
     }
     /* clean up parsed buffer */
-    if(thisPtr > bufEnd) {
-        *size = 0;
-    } else {
-        size_t newSize = bufEnd - thisPtr;
-        memmove(buf, thisPtr, newSize);
-        *bufPtr = realloc(buf, newSize);
-        *size = newSize;
+    if(thisPtr < bufEnd) {
+        *size = bufEnd - thisPtr;
     }
     /* Set return status */
     if(req->curState == requestError) {

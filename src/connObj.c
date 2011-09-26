@@ -9,8 +9,10 @@ void freeConnObj(void *data)
 {
     connObj *connPtr = data;
     close(connPtr->connFd);
-    char *buffer = (connPtr->buffer);
-    free(buffer);
+    free(connPtr->readBuffer);
+    free(connPtr->writeBuffer);
+    freeRequestObj(connPtr->req);
+    freeResponseObj(connPtr->res);
     free(connPtr);
 }
 
@@ -24,11 +26,13 @@ connObj *createConnObj(int connFd, ssize_t bufferSize)
 {
     connObj *newObj = malloc(sizeof(connObj));
     newObj->connFd = connFd;
-    newObj->curSize = 0;
-    newObj->maxSize = bufferSize;
+    newObj->curReadSize = 0;
+    newObj->maxReadSize = bufferSize;
+    newObj->curWriteSize = 0;
+    newObj->maxWriteSize = bufferSize;
     newObj->isOpen = 1;
-    newObj->buffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
-    newObj->req=createRequestObj();
+    newObj->readBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
+    newObj->writeBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
     return newObj;
 }
 
@@ -40,15 +44,21 @@ int getConnObjSocket(connObj *connPtr)
 
 void getConnObjReadBuffer(connObj *connPtr, char **buf, ssize_t *size)
 {
-    int emptySize = connPtr->maxSize - connPtr->curSize;
-    *buf = connPtr->buffer + connPtr->curSize;
+    int emptySize = connPtr->maxReadSize - connPtr->curReadSize;
+    *buf = connPtr->readBuffer + connPtr->curReadSize;
     *size = emptySize;
 }
 
-void getConnObjWriteBuffer(connObj *connPtr, char **buf, ssize_t *size)
+void getConnObjWriteBufferForRead(connObj *connPtr, char **buf, ssize_t *size)
 {
-    *buf = connPtr->buffer;
-    *size = connPtr->curSize;;
+    *buf = connPtr->writeBuffer;
+    *size = connPtr->curWriteSize;;
+}
+
+void getConnObjWriteBufferForWrite(connObj *connPtr, char **buf, ssize_t *size)
+{
+    *buf = connPtr->writeBuffer + connPtr->curWriteSize;
+    *size = connPtr->maxWriteSize - connPtr->curWriteSize;
 }
 
 void setConnObjClose(connObj *connPtr)
@@ -56,29 +66,44 @@ void setConnObjClose(connObj *connPtr)
     connPtr->isOpen = 0;
 }
 
-void setConnObjReadSize(connObj *connPtr, ssize_t readSize)
+void addConnObjReadSize(connObj *connPtr, ssize_t readSize)
 {
-    connPtr->curSize += readSize;
+    connPtr->curReadSize += readSize;
 }
 
-void setConnObjWriteSize(connObj *connPtr, ssize_t writeSize)
+void addConnObjWriteSize(connObj *connPtr, ssize_t writeSize)
 {
-    ssize_t curSize = connPtr->curSize;
-    if(writeSize <= curSize) {
-        char *buf = connPtr->buffer;
-        memmove(buf, buf + writeSize, curSize - writeSize);
-        connPtr->curSize -= writeSize;
+    connPtr->curWriteSize += writeSize;
+}
+
+void removeConnObjReadSize(connObj *connPtr, ssize_t readSize)
+{
+    ssize_t curReadSize = connPtr->curReadSize;
+    if(readSize <= curReadSize) {
+        char *buf = connPtr->readBuffer;
+        memmove(buf, buf + readSize, curReadSize - readSize);
+        connPtr->curReadSize -= readSize;
+    }
+}
+
+void removeConnObjWriteSize(connObj *connPtr, ssize_t writeSize)
+{
+    ssize_t curWriteSize = connPtr->curWriteSize;
+    if(writeSize <= curWriteSize) {
+        char *buf = connPtr->writeBuffer;
+        memmove(buf, buf + writeSize, curWriteSize - writeSize);
+        connPtr->curWriteSize -= writeSize;
     }
 }
 
 int isFullConnObj(connObj *connPtr)
 {
-    return connPtr->curSize == connPtr->maxSize;
+    return connPtr->curReadSize == connPtr->maxReadSize;
 }
 
 int isEmptyConnObj(connObj *connPtr)
 {
-    return connPtr->curSize == 0;
+    return connPtr->curWriteSize == 0;
 }
 
 
