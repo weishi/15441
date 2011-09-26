@@ -148,7 +148,7 @@ void httpParseLine(requestObj *req, char *line, size_t lineSize, size_t *parsedS
         }
         break;
     case content:
-        char *lengthStr = getValueByKey(req, "content-length");
+        char *lengthStr = getValueByKey(req->header, "content-length");
         int length = atoi(lengthStr);
         int curLength = req->contentLength;
         if(curLength == length) {
@@ -181,7 +181,7 @@ int isValidRequest(requestObj *req)
     }
     switch(req->method) {
     case POST:
-        char *length = getValueByKey(req, "content-length");
+        char *length = getValueByKey(req->header, "content-length");
         if(length == NULL) {
             return 0;
         } else {
@@ -189,7 +189,7 @@ int isValidRequest(requestObj *req)
         }
     case HEAD:
     case GET:
-        char *host = getValueByKey(req, "host");
+        char *host = getValueByKey(req->header, "host");
         if(host == NULL) {
             return 0;
         } else {
@@ -211,45 +211,6 @@ void strLower(char *str)
     }
 }
 
-headerEntry newHeaderEntry(char *key, char *value)
-{
-    if(key == NULL) {
-        return NULL;
-    }
-    headerEntry *hd = malloc(sizeof(headerEntry));
-    char *thisKey = malloc(strlen(key) + 1);
-    char *thisValue = NULL;
-    strcpy(thisKey, key);
-    if(value != NULL) {
-        thisValue = malloc(strlen(value) + 1);
-        strcpy(thisValue, value);
-    }
-    hd->key = strLower(thisKey);
-    hd->value = thisValue;
-    return hd;
-}
-
-void freeHeaderEntry(headerEntry *hd)
-{
-    if(hd != NULL) {
-        free(hd->key);
-        free(hd->value);
-        free(hd);
-    }
-}
-
-char *getValueByKey(requestObj *req, char *key)
-{
-    headerEntry *target = newHeaderEntry(key, NULL);
-    headerEntry *result = searchList(req->header, target);
-    freeHeaderEntry(target);
-
-    if(result == NULL) {
-        return NULL;
-    } else {
-        return result->value;
-    }
-}
 void setRequestError(requestObj *req, StatusCode code)
 {
     req->curState = requestError;

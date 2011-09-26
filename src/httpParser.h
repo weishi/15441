@@ -7,6 +7,7 @@
 #include <errno.h>
 
 #include "linkedList.h"
+#include "httpHeader.h"
 
 enum State {
     requestLine,
@@ -45,11 +46,6 @@ struct methodEntry {
     char *s;
 } methodEntry;
 
-typedef struct headerEntry {
-    char*key;
-    char *value;
-}headerEntry;
-
 struct methodEntry methodTable[3];
 
 typedef struct requestObj {
@@ -70,6 +66,6 @@ Status httpParse(requestObj *req, char *buf, size_t size);
 
 /* Private methods */
 void nextToken(char *buf);
-headerEntry newHeaderEntry(char *key, char *value);
+void strLower(char*);
 
 #endif

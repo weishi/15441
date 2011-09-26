@@ -6,35 +6,35 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
-#include <sys/stat.h>
 
 #include "linkedList.h"
 #include "httpParser.h"
+#include "httpHeader.h"
+#include "fileIO.h"
 
-typedef struct responseObj{
+typedef struct responseObj {
     char *statusLine;
     DLL *header;
-    //File related
-    FILE *file;
-    char *filePath;
-    char *fileType;
-    int fileLength;
-    char *fileLastMod;
-    //Conn related
-    char* headerBuffer;
+    fileMetadata *fileMeta;
+    //Write Buffer related
+    char *headerBuffer;
     char *fileBuffer;
+    size_t headerPtr;
+    size_t filePtr;
+    size_t maxHeaderPtr;
+    size_t maxFilePtr;
+
     int close;
 }
 
 /* Public methods */
 responseObj *createResponseObj();
-void freeResponseObj(responseObj*);
+void freeResponseObj(responseObj *);
 size_t writeResponse(responseObj *res, char *buf, size_t size);
+void buildResponseObj(responseObj *, requestObj *);
 
 /* Private methods */
-char* getHTTPDate(time_t);
+void fillHeader(responseObj *);
+char *getHTTPDate(time_t);
 int addStatusLine(responseObj *res, requestObj *req);
-int prepareFile(requestObj *req, responseObj *res);
-char* getFileType(char *path);
-char *createPath(char *dir, char *path, char *fileName);
 #endif
