@@ -1,5 +1,5 @@
-#ifndef HTTPHANDLER_H
-#define HTTPHANDLER_H
+#ifndef CONNHANDLER_H
+#define CONNHANDLER_H
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -7,9 +7,7 @@
 #include <errno.h>
 #include <time.h>
 
-#include "linkedList.h"
 #include "httpParser.h"
-#include "httpHeader.h"
 #include "fileIO.h"
 
 typedef struct responseObj {
@@ -25,12 +23,12 @@ typedef struct responseObj {
     size_t maxFilePtr;
 
     int close;
-}
+} responseObj;
 
 /* Public methods */
 responseObj *createResponseObj();
 void freeResponseObj(responseObj *);
-size_t writeResponse(responseObj *res, char *buf, size_t size);
+size_t writeResponse(responseObj *, char *, size_t );
 void buildResponseObj(responseObj *, requestObj *);
 int toClose(responseObj *);
 

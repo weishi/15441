@@ -10,14 +10,13 @@
 #include <unistd.h>
 
 #include "connHandler.h"
-#include "linkedList.h"
+
 
 typedef struct selectEngine {
     int port;
-    char *logFile;
-    int (*newConnHandler)(connObj *);
+    int  (*newConnHandler)(connObj *);
     void (*readConnHandler)(connObj *);
-    void (*processConnHandler)(connObj *),
+    void (*processConnHandler)(connObj *);
     void (*writeConnHandler)(connObj *);
     int (*closeConnHandler)(connObj *);
 
@@ -25,12 +24,12 @@ typedef struct selectEngine {
 
 void initEngine(selectEngine *engine,
                 int port,
-                char *logFile,
                 int (*newConnHandler)(connObj *),
                 void (*readConnHandler)(connObj *),
                 void (*processConnHandler)(connObj *),
                 void (*writeConnHandler)(connObj *),
-                int (*closeConnHandler)(connObj *) );
+                int (*closeConnHandler)(connObj *)
+               );
 
 int startEngine(selectEngine *);
 int listenSocket(selectEngine *, int listenFd);

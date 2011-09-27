@@ -1,4 +1,3 @@
-
 #include "connHandler.h"
 
 int newConnectionHandler(connObj *connPtr)
@@ -20,21 +19,21 @@ void processConnectionHandler(connObj *connPtr)
     char *buf;
     ssize_t size, retSize;
     getConnObjReadBuffer(connPtr, &buf, &size);
-    switch(httpParse(connObj->req, buf, size)) {
+    switch(httpParse(connPtr->req, buf, &size)) {
     case Parsing:
         removeConnObjReadSize(connPtr, size);
         break;
     case Parsed:
         removeConnObjReadSize(connPtr, size);
-        if(connObj == NULL) {
-            connObj->res = createResponseObj();
-            buildResponseObj(connObj->res, connObj->req);
+        if(connPtr == NULL) {
+            connPtr->res = createResponseObj();
+            buildResponseObj(connPtr->res, connPtr->req);
         }
         /* Dump response to buffer */
         getConnObjWriteBufferForWrite(connPtr, &buf, &size);
-        retSize = writeResponse(connObj->res, buf, size);
+        retSize = writeResponse(connPtr->res, buf, size);
         if(retSize == 0) {
-            if(1 == toClose(connObj->res)) {
+            if(1 == toClose(connPtr->res)) {
                 setConnObjClose(connPtr);
             }
             /* Prepare for next request */
@@ -50,6 +49,7 @@ void processConnectionHandler(connObj *connPtr)
         setConnObjClose(connPtr);
         break;
     default:
+        break;
     }
     return;
 }
@@ -75,7 +75,7 @@ void readConnectionHandler(connObj *connPtr)
             setConnObjClose(connPtr);
             return;
         } else {
-            setConnObjReadSize(connPtr, readret);
+            addConnObjReadSize(connPtr, readret);
         }
 
     }
@@ -93,7 +93,7 @@ void writeConnectionHandler(connObj *connPtr)
         fprintf(stderr, "Error sending to client.\n");
         setConnObjClose(connPtr);
     } else {
-        setConnObjWriteSize(connPtr, size);
+        removeConnObjWriteSize(connPtr, size);
     }
 
 }

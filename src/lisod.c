@@ -10,7 +10,6 @@
 int main(int argc, char *argv[])
 {
     int port;
-    char *logFile;
     selectEngine engine;
     if(argc != 3) {
         printf(USAGE, argv[0]);
@@ -21,9 +20,9 @@ int main(int argc, char *argv[])
     logFile = argv[2];
     initEngine(&engine,
                port,
-               logFile,
                newConnectionHandler,
                readConnectionHandler,
+               processConnectionHandler,
                writeConnectionHandler,
                closeConnectionHandler);
     return startEngine(&engine);

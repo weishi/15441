@@ -13,9 +13,5 @@
 
 #define USAGE "\nUsage: %s <port> <logFile>\n"
 
-char *logFile;
-char *lockFile;
-char *wwwFolder;
-char *CGIFolder;
 
 #endif

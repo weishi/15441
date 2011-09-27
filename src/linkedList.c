@@ -14,7 +14,7 @@ void initList(DLL *list,
 
 void freeList(DLL* list){
     if(list!=NULL){
-        while(size>0){
+        while(list->size>0){
             removeNodeAt(list, 0);
         }
         free(list);

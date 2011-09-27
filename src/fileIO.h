@@ -8,15 +8,10 @@
 #include <time.h>
 #include <sys/stat.h>
 
-#include "lisod.h"
-
-typedef struct fileMetadata{
-   FILE *fd;
-   char *path;
-   MIMEType type;
-   int length;
-   time_t lastMod;
-} fileMetadata;
+char *logFile;
+char *lockFile;
+char *wwwFolder;
+char *CGIFolder;
 
 enum MIMEType{
     HTML,
@@ -24,7 +19,16 @@ enum MIMEType{
     JPEG,
     PNG,
     OTHER,
-}
+};
+
+typedef struct fileMetadata{
+   FILE *fd;
+   char *path;
+   enum MIMEType type;
+   int length;
+   time_t lastMod;
+} fileMetadata;
+
 
 
 
@@ -39,6 +43,6 @@ time_t getLastMod(fileMetadata *fm);
 
 /* Private methods */
 char *createPath(char *dir, char *path, char *fileName);
-MIMEType getFileType(char *path);
+enum MIMEType getFileType(char *path);
 
 #endif

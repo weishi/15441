@@ -32,7 +32,7 @@ enum StatusCode {
     NOT_IMPLEMENTED = 501,
     SERVICE_UNAVAILAVLE = 503,
     HTTP_VERSION_NOT_SUPPORTED = 505,
-}
+};
 
 enum Method {
     GET,
@@ -42,27 +42,27 @@ enum Method {
 };
 
 struct methodEntry {
-    Method m;
+    enum Method m;
     char *s;
 } methodEntry;
 
 struct methodEntry methodTable[3];
 
 typedef struct requestObj {
-    Method method;
+    enum Method method;
     char *uri;
-    int version
+    int version;
     DLL *header;
     char *content;
     int contentSize;
     int statusCode;
-    State curState;
+    enum State curState;
 } requestObj;
 
 /* Public methods */
 requestObj *createRequestObj();
 void freeRequestObj(requestObj*);
-Status httpParse(requestObj *req, char *buf, size_t size);
+enum Status httpParse(requestObj *, char *, ssize_t *);
 
 /* Private methods */
 void nextToken(char *buf);

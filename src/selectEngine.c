@@ -1,9 +1,7 @@
-
 #include "selectEngine.h"
 
 void initEngine(selectEngine *engine,
                 int port,
-                char *logFile,
                 int (*newConnHandler)(connObj *),
                 void (*readConnHandler)(connObj *),
                 void (*processConnHandler)(connObj *),
@@ -12,7 +10,6 @@ void initEngine(selectEngine *engine,
 {
 
     engine->port = port;
-    engine->logFile = logFile;
     engine->newConnHandler = newConnHandler;
     engine->readConnHandler = readConnHandler;
     engine->processConnHandler= processConnHandler;

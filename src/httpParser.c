@@ -32,14 +32,14 @@ void freeRequestObj(requestObj *req)
 }
 
 
-Status httpParse(requestObj *req, char **bufPtr, ssize_t *size)
+enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size)
 {
     if(req == NULL || req->curState ==requestDone) {
         *size=0
         return Parsed;
     }
     ssize_t curSize = *size;
-    char *buf = *bufPtr;
+    char *buf = bufPtr;
     char *bufEnd = buf + curSize;
     char *thisPtr = buf;
     char *nextPtr;
