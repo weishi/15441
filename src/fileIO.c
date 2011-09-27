@@ -1,11 +1,11 @@
-#include "httpParser.h"
+#include "fileIO.h"
 
-fileMetadata prepareFile(char *uri, char *mode)
+fileMetadata *prepareFile(char *uri, char *mode)
 {
     char *path;
     struct stat fileStat;
     FILE *fd;
-    fileMetadata fm;
+    fileMetadata *fm;
     if(uri[strlen(uri)-1] == '/') {
         path = createPath(wwwFolder, uri, "index.html");
     } else {
@@ -33,8 +33,8 @@ fileMetadata prepareFile(char *uri, char *mode)
 char *loadFile(fileMetadata *fm)
 {
     char *buffer = calloc(fm->length + 1, 1);
-    fread(fm->fd, fm->length, 1, buffer);
-    close(fm->fd);
+    fread(buffer, fm->length, 1, fm->fd);
+    fclose(fm->fd);
     return buffer;
 }
 
@@ -72,7 +72,7 @@ time_t getLastMod(fileMetadata *fm)
 
 /* Private methods */
 
-MIMEType getFileType(char *path)
+enum MIMEType getFileType(char *path)
 {
     if(strlen(path) < 4) {
         return OTHER;

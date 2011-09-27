@@ -1,41 +1,32 @@
 #include "httpParser.h"
 
-methodTable = {
-    {GET, "GET"},
-    {HEAD, "HEAD"},
-    {POST, "POST"},
-};
-
 requestObj *createRequestObj()
 {
     requestObj *newObj = malloc(sizeof(requestObj));
     newObj->method = UNIMPLEMENTED;
     newObj->uri = NULL;
-    newObj->version = NULL;
+    newObj->version = 0;
     newObj->header = malloc(sizeof(DLL));
     initList(newObj->header, compareHeaderEntry, freeHeaderEntry, NULL);
     newObj->content = NULL;
-    newObj->contentSize = 0;
+    newObj->contentLength = 0;
     newObj->statusCode = 0;
     newObj->curState = requestLine;
-    newObj->buffer = NULL;
-    newObj->bufSize = 0;
     return newObj;
 }
 void freeRequestObj(requestObj *req)
 {
-    free(uri);
-    free(content);
-    free(buffer);
-    freeList(header);
+    free(req->uri);
+    free(req->content);
+    freeList(req->header);
     free(req);
 }
 
 
 enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size)
 {
-    if(req == NULL || req->curState ==requestDone) {
-        *size=0
+    if(req == NULL || req->curState == requestDone) {
+        *size = 0;
         return Parsed;
     }
     ssize_t curSize = *size;
@@ -43,7 +34,7 @@ enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size)
     char *bufEnd = buf + curSize;
     char *thisPtr = buf;
     char *nextPtr;
-    size_t parsedSize;
+    ssize_t parsedSize;
     while(1) {
         if(req->curState == content) {
             nextPtr = bufEnd + 1;
@@ -81,14 +72,19 @@ enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size)
 
 }
 
-void httpParseLine(requestObj *req, char *line, size_t lineSize, size_t *parsedSize)
+void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parsedSize)
 {
+    static struct methodEntry methodTable[] = {
+        {GET, "GET"},
+        {HEAD, "HEAD"},
+        {POST, "POST"},
+    };
     switch(req->curState) {
-    case requestLine:
-        char *method = malloc(lineSize);
-        char *uri = malloc(lineSize);
+    case requestLine: {
+        char *method = malloc(lineSize + 1);
+        char *uri = malloc(lineSize + 1);
         int version;
-        if(sscanf(line, "%s %s HTTP/1.%d\r\n", method, uri, version) != 3) {
+        if(sscanf(line, "%s %s HTTP/1.%d\r\n", method, uri, &version) != 3) {
             setRequestError(req, BAD_REQUEST);
         } else {
             int numMethods = sizeof(methodTable) / sizeof(methodEntry);
@@ -104,7 +100,7 @@ void httpParseLine(requestObj *req, char *line, size_t lineSize, size_t *parsedS
             } else if(version != 1) {
                 setRequestError(req, HTTP_VERSION_NOT_SUPPORTED);
             } else {
-                realloc(uri, strlen(uri) + 1);
+                uri=realloc(uri, strlen(uri) + 1);
                 req->uri = uri;
                 req->version = version;
                 req->curState = headerLine;
@@ -115,8 +111,9 @@ void httpParseLine(requestObj *req, char *line, size_t lineSize, size_t *parsedS
         if(req->curState == requestError) {
             free(uri);
         }
-        break;
-    case headerLine:
+    }
+    break;
+    case headerLine: {
         if(strcmp(line, "\r\n") == 0) {
             if(isValidRequest(req)) {
                 if(req->method == GET || req->method == HEAD) {
@@ -135,22 +132,23 @@ void httpParseLine(requestObj *req, char *line, size_t lineSize, size_t *parsedS
             if(sscanf(line, "%[a-zA-Z0-9-]:%[^\r\n]", key, value) != 2) {
                 setRequestError(req, BAD_REQUEST);
             } else {
-                realloc(key, strlen(key) + 1);
-                realloc(value, strlen(value) + 1);
+                key=realloc(key, strlen(key) + 1);
+                value=realloc(value, strlen(value) + 1);
                 insertNode(req->header, newHeaderEntry(key, value));
             }
             free(key);
             free(value);
         }
-        break;
-    case content:
+    }
+    break;
+    case content: {
         char *lengthStr = getValueByKey(req->header, "content-length");
         int length = atoi(lengthStr);
         int curLength = req->contentLength;
         if(curLength == length) {
             req->curState = requestDone;
         }
-        if(length - curLength <= size) {
+        if(length - curLength <= lineSize) {
             size_t readSize = length - curLength;
             req->content = realloc(req->content, length);
             memcpy(req->content + curLength, line, readSize);
@@ -158,15 +156,17 @@ void httpParseLine(requestObj *req, char *line, size_t lineSize, size_t *parsedS
             req->curState = requestDone;
             *parsedSize = readSize;
         } else {
-            realloc(req->content, curLength + size);
-            memcpy(req->content + curLength, line, size);
-            req->contentLength = curLength + size;
+            req->content=realloc(req->content, curLength + lineSize);
+            memcpy(req->content + curLength, line, lineSize);
+            req->contentLength = curLength + lineSize;
             req->curState = content;
         }
         break;
+    }
     case requestError:
     case requestDone:
     default:
+        break;
     }
 }
 
@@ -176,38 +176,31 @@ int isValidRequest(requestObj *req)
         return 0;
     }
     switch(req->method) {
-    case POST:
+    case POST: {
         char *length = getValueByKey(req->header, "content-length");
         if(length == NULL) {
             return 0;
         } else {
             return 1;
         }
+    }
     case HEAD:
-    case GET:
+    case GET: {
         char *host = getValueByKey(req->header, "host");
         if(host == NULL) {
             return 0;
         } else {
             return 1;
         }
+    }
     case UNIMPLEMENTED:
     default:
         return 0;
     }
 }
 
-void strLower(char *str)
-{
-    if(str != NULL) {
-        int i = strlen(str) - 1;
-        for(; i >= 0; i--) {
-            str[i] = tolower(str[i]);
-        }
-    }
-}
 
-void setRequestError(requestObj *req, StatusCode code)
+void setRequestError(requestObj *req, enum StatusCode code)
 {
     req->curState = requestError;
     req->statusCode = (int)code;
@@ -223,20 +216,3 @@ char *nextToken(char *buf)
     }
 }
 
-void addBuffer(requestObj *req, char *buf, size_t size)
-{
-    if(req->bufSize == 0) {
-        req->buffer = malloc(size);
-        req->bufSize = size;
-        memcpy(req->buffer, buf, size);
-
-    } else {
-        size_t oldSize = req->bufSize;
-        char *newBuf = malloc(size + oldSize);
-        memcpy(newBuf, req->buffer, oldSize);
-        memcpy(newBuf + oldSize, buf, size);
-        free(req->buffer);
-        req->buffer = newBuf;
-        req->bufSize = size + oldSize;
-    }
-}

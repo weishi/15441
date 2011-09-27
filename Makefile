@@ -19,8 +19,9 @@ OBJECTS += connHandler.o
 OBJECTS += connObj.o
 OBJECTS += httpParser.o
 OBJECTS += httpHeader.o
-OBJECTS += httpReponder.o
+OBJECTS += httpResponder.o
 OBJECTS += fileIO.o
+OBJECTS += common.o
 
 
 

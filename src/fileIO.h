@@ -33,7 +33,7 @@ typedef struct fileMetadata{
 
 
 /* Public methods */
-fileMetadata prepareFile(char *, char*);
+fileMetadata *prepareFile(char *, char*);
 char *loadFile(fileMetadata *fm);
 
 char* getContentType(fileMetadata *fm);

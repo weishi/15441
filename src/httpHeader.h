@@ -6,7 +6,7 @@
 #include <string.h>
 
 #include "linkedList.h"
-
+#include "common.h"
 
 typedef struct headerEntry {
     char *key;
@@ -14,10 +14,10 @@ typedef struct headerEntry {
 } headerEntry;
 
 char *getValueByKey(DLL *, char *);
-headerEntry newHeaderEntry(char *key, char *value);
+headerEntry *newHeaderEntry(char *key, char *value);
 
 
-void freeHeaderEntry(headerEntry *);
+void freeHeaderEntry(void *);
 int compareHeaderEntry(void *data1, void *data2);
 
 

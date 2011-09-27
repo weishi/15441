@@ -23,7 +23,7 @@ void buildResponseObj(responseObj *res, requestObj *req)
     DLL *header = res->header;
     /* Add general headers */
     char *dateStr = getHTTPDate(time(0));
-    insertNode(header, newHeaderEntry("date", datestr));
+    insertNode(header, newHeaderEntry("date", dateStr));
     free(dateStr);
 
     insertNode(header, newHeaderEntry("server", "Liso/1.0"));
@@ -39,9 +39,9 @@ void buildResponseObj(responseObj *res, requestObj *req)
         switch(req->method) {
         case POST:
         case GET:
-            res->fileBuffer = laodFile(res->fileMeta);
+            res->fileBuffer = loadFile(res->fileMeta);
             res->maxFilePtr = res->fileMeta->length;
-        case HEAD:
+        case HEAD:{
             char *valBuf;
             char *valPtr;
             //Connection
@@ -54,8 +54,8 @@ void buildResponseObj(responseObj *res, requestObj *req)
             valPtr = getValueByKey(req->header, "host");
             valBuf = malloc(strlen(getFilePath(res->fileMeta))
                             + strlen(valPtr) + 1);
-            strcpy(locationBuf, valPtr);
-            strcat(locationBuf, getFilePath(res->fileMeta));
+            strcpy(valBuf, valPtr);
+            strcat(valBuf, getFilePath(res->fileMeta));
             insertNode(header, newHeaderEntry("location", valBuf));
             free(valBuf);
             //Content-length
@@ -68,8 +68,10 @@ void buildResponseObj(responseObj *res, requestObj *req)
             //Last-modified
             insertNode(header, newHeaderEntry("last-modified",
                                               getHTTPDate(getLastMod(res->fileMeta))));
+                  }
             break;
         default:
+            break;
         }
         fillHeader(res);
         //Combine header + file buffer
@@ -83,18 +85,18 @@ void fillHeader(responseObj *res)
     size_t lineSize;
     int i;
     bufSize += strlen(res->statusLine);
-    headerBuffer = malloc(bufSize + 1);
-    strcpy(headerBuffer, res->statusLine);
+    res->headerBuffer = malloc(bufSize + 1);
+    strcpy(res->headerBuffer, res->statusLine);
     for(i = 0; i < headerSize; i++) {
-        headerEntry *hd = getNodeDataAt(i);
+        headerEntry *hd = getNodeDataAt(res->header,i);
         lineSize = strlen(hd->key) + strlen(": ") + strlen(hd->value) + strlen("\r\n");
-        headerBuffer = realloc(headerBuffer, bufSize + lineSize + 1);
-        sprintf(headerBuffer + bufSize, "%s: %s\r\n", hd->key, hd->value);
+        res->headerBuffer = realloc(res->headerBuffer, bufSize + lineSize + 1);
+        sprintf(res->headerBuffer + bufSize, "%s: %s\r\n", hd->key, hd->value);
         bufSize += lineSize;
     }
     lineSize = strlen("\r\n");
-    headerBuffer = realloc(headerBuffer, bufSize + lineSize + 1);
-    sprintf(headerBuffer + bufSize, "\r\n");
+    res->headerBuffer = realloc(res->headerBuffer, bufSize + lineSize + 1);
+    sprintf(res->headerBuffer + bufSize, "\r\n");
     bufSize += lineSize;
     res->maxHeaderPtr = bufSize;
 }
@@ -137,7 +139,7 @@ char *getHTTPDate(time_t tmraw)
 {
     char *dateStr = malloc(256);
     struct tm ctm = *gmtime(&tmraw);
-    strftime(datestr, sizeof(datestr), "%a, %d %b %Y %H:%M:%S %Z", &ctm);
+    strftime(dateStr, sizeof(dateStr), "%a, %d %b %Y %H:%M:%S %Z", &ctm);
     return dateStr;
 }
 
@@ -150,7 +152,7 @@ int addStatusLine(responseObj *res, requestObj *req)
     sl = "HTTP/1.1 200 OK\r\n";
     if(req->curState == requestError) {
         errorFlag = 1;
-        switch((StatusCode)req->statsCode) {
+        switch((enum StatusCode)req->statusCode) {
         case BAD_REQUEST:
             sl = "HTTP/1.1 400 BAD REQUEST\r\n";
             break;
