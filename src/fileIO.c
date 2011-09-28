@@ -1,5 +1,18 @@
 #include "fileIO.h"
 
+
+int initFileIO(char *lockFile, char *wwwFolder, char *CGIFolder)
+{
+    if(lockFile == NULL || wwwFolder == NULL || CGIFolder == NULL) {
+        return -1;
+    }
+    _lockFile = lockFile;
+    _wwwFolder = wwwFolder;
+    _CGIFolder = CGIFolder;
+    return 0;
+}
+
+
 fileMetadata *prepareFile(char *uri, char *mode)
 {
     char *path;
@@ -7,10 +20,11 @@ fileMetadata *prepareFile(char *uri, char *mode)
     FILE *fd;
     fileMetadata *fm;
     if(uri[strlen(uri)-1] == '/') {
-        path = createPath(wwwFolder, uri, "index.html");
+        path = createPath(_wwwFolder, uri, "index.html");
     } else {
-        path = createPath(wwwFolder, uri, NULL);
+        path = createPath(_wwwFolder, uri, NULL);
     }
+    logger(LogDebug, "FilePath:[%s]\n", path);
     if(stat(path, &fileStat) != 0) {
         return NULL;
     }
@@ -38,7 +52,8 @@ char *loadFile(fileMetadata *fm)
     return buffer;
 }
 
-char *getFilePath(fileMetadata *fm){
+char *getFilePath(fileMetadata *fm)
+{
     return fm->path;
 }
 
@@ -58,10 +73,10 @@ char *getContentType(fileMetadata *fm)
     }
 }
 
-char* getContentLength(fileMetadata *fm)
+char *getContentLength(fileMetadata *fm)
 {
-    char *buffer=malloc(512);
-    sprintf(buffer, "%d",fm->length);
+    char *buffer = malloc(512);
+    sprintf(buffer, "%d", fm->length);
     return buffer;
 }
 
@@ -69,6 +84,31 @@ time_t getLastMod(fileMetadata *fm)
 {
     return fm->lastMod;
 }
+
+
+int initLogger(char *logFile)
+{
+    logFD = fopen(logFile, "w");
+    if(logFD == NULL) {
+        return -1;
+    } else {
+        return 0;
+    }
+}
+
+void logger(enum LogLevel level, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    if(level >= CUR_LOG_LEVEL) {
+        vfprintf(logFD, format, args);
+        fflush(logFD);
+    }
+    va_end(args);
+
+}
+
+
 
 /* Private methods */
 

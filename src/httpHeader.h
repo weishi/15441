@@ -7,6 +7,7 @@
 
 #include "linkedList.h"
 #include "common.h"
+#include "fileIO.h"
 
 typedef struct headerEntry {
     char *key;

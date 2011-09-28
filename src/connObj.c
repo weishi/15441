@@ -33,6 +33,7 @@ connObj *createConnObj(int connFd, ssize_t bufferSize)
     newObj->isOpen = 1;
     newObj->readBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
     newObj->writeBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
+    newObj->req=createRequestObj();
     return newObj;
 }
 
@@ -42,7 +43,13 @@ int getConnObjSocket(connObj *connPtr)
     return connPtr->connFd;
 }
 
-void getConnObjReadBuffer(connObj *connPtr, char **buf, ssize_t *size)
+void getConnObjReadBufferForRead(connObj *connPtr, char **buf, ssize_t *size)
+{
+    *buf = connPtr->readBuffer; 
+    *size = connPtr->curReadSize;;
+}
+
+void getConnObjReadBufferForWrite(connObj *connPtr, char **buf, ssize_t *size)
 {
     int emptySize = connPtr->maxReadSize - connPtr->curReadSize;
     *buf = connPtr->readBuffer + connPtr->curReadSize;

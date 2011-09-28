@@ -16,10 +16,12 @@ requestObj *createRequestObj()
 }
 void freeRequestObj(requestObj *req)
 {
-    free(req->uri);
+    if(req!=NULL){
+        free(req->uri);
     free(req->content);
     freeList(req->header);
     free(req);
+    }
 }
 
 
@@ -27,32 +29,39 @@ enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size)
 {
     if(req == NULL || req->curState == requestDone) {
         *size = 0;
+        logger(LogDebug, "Existing ReqObj. No Parsing Needed\n");
         return Parsed;
     }
     ssize_t curSize = *size;
-    char *buf = bufPtr;
-    char *bufEnd = buf + curSize;
-    char *thisPtr = buf;
+    char *bufEnd = bufPtr + curSize;
+    char *thisPtr = bufPtr;
     char *nextPtr;
     ssize_t parsedSize;
+    logger(LogDebug, "Start parsing %d bytes\n", *size);
     while(1) {
         if(req->curState == content) {
             nextPtr = bufEnd + 1;
         } else {
-            nextPtr = nextToken(thisPtr);
+            nextPtr = nextToken(thisPtr, bufEnd);
         }
         if(nextPtr != NULL) {
+            logger(LogDebug, "hasNext\n");
             parsedSize = (size_t)(nextPtr - thisPtr);
             httpParseLine(req, thisPtr, parsedSize, &parsedSize);
+            logger(LogDebug, "One line parsed\n");
         } else {
+            logger(LogDebug, "noNext\n");
             break;
         }
-        if(req->curState == requestError) {
+        if(req->curState == requestError ) {
             break;
         }
         /* Prepare for next line */
         thisPtr = thisPtr + parsedSize;
         if(thisPtr > bufEnd) {
+            break;
+        }
+        if(req->curState == requestDone) {
             break;
         }
     }
@@ -62,10 +71,13 @@ enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size)
     }
     /* Set return status */
     if(req->curState == requestError) {
+        logger(LogDebug, "Parsing result: error\n");
         return ParseError;
     } else if(req->curState == requestDone) {
+        logger(LogDebug, "Parsing result: done\n");
         return Parsed;
     } else {
+        logger(LogDebug, "Parsing result: parsing\n");
         return Parsing;
     }
 
@@ -87,6 +99,8 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
         if(sscanf(line, "%s %s HTTP/1.%d\r\n", method, uri, &version) != 3) {
             setRequestError(req, BAD_REQUEST);
         } else {
+            logger(LogDebug, "Parsed Status Line:\n Method = %s\nURI = %s\nVersion = %d\n",
+                   method, uri, version);
             int numMethods = sizeof(methodTable) / sizeof(methodEntry);
             int i;
             for(i = 0; i < numMethods; i++) {
@@ -100,7 +114,7 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
             } else if(version != 1) {
                 setRequestError(req, HTTP_VERSION_NOT_SUPPORTED);
             } else {
-                uri=realloc(uri, strlen(uri) + 1);
+                uri = realloc(uri, strlen(uri) + 1);
                 req->uri = uri;
                 req->version = version;
                 req->curState = headerLine;
@@ -114,8 +128,12 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
     }
     break;
     case headerLine: {
-        if(strcmp(line, "\r\n") == 0) {
+        logger(LogDebug, "curState: headerLine\n");
+        if(lineSize==2 && line[0]=='\r' && line[1]=='\n') {
+                logger(LogDebug, "Header Close line\n");
+
             if(isValidRequest(req)) {
+                logger(LogDebug, "isValid\n");
                 if(req->method == GET || req->method == HEAD) {
                     req->curState = requestDone;
                 } else if(req->method == POST) {
@@ -127,14 +145,17 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
                 setRequestError(req, LENGTH_REQUIRED);
             }
         } else {
+            logger(LogDebug, "KeyValue header\n");
             char *key = malloc(lineSize);
             char *value = malloc(lineSize);
             if(sscanf(line, "%[a-zA-Z0-9-]:%[^\r\n]", key, value) != 2) {
                 setRequestError(req, BAD_REQUEST);
             } else {
-                key=realloc(key, strlen(key) + 1);
-                value=realloc(value, strlen(value) + 1);
+                key = realloc(key, strlen(key) + 1);
+                value = realloc(value, strlen(value) + 1);
+                logger(LogDebug, "Before[%s,%s]\n", key, value);
                 insertNode(req->header, newHeaderEntry(key, value));
+                logger(LogDebug, "After[%s,%s]\n",key, value);
             }
             free(key);
             free(value);
@@ -156,7 +177,7 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
             req->curState = requestDone;
             *parsedSize = readSize;
         } else {
-            req->content=realloc(req->content, curLength + lineSize);
+            req->content = realloc(req->content, curLength + lineSize);
             memcpy(req->content + curLength, line, lineSize);
             req->contentLength = curLength + lineSize;
             req->curState = content;
@@ -186,10 +207,13 @@ int isValidRequest(requestObj *req)
     }
     case HEAD:
     case GET: {
+        logger(LogDebug, "Test Host\n");
         char *host = getValueByKey(req->header, "host");
         if(host == NULL) {
+            logger(LogDebug, "No Host\n");
             return 0;
         } else {
+            logger(LogDebug, "Has Host\n");
             return 1;
         }
     }
@@ -204,11 +228,22 @@ void setRequestError(requestObj *req, enum StatusCode code)
 {
     req->curState = requestError;
     req->statusCode = (int)code;
+    logger(LogProd, "Parse Error with code = %d\n", (int)code);
 }
 
-char *nextToken(char *buf)
+char *nextToken(char *buf, char *bufEnd)
 {
-    char *next = strstr(buf, "\r\n");
+    char *next = NULL;
+    logger(LogDebug, "Buf content: ");
+    for(; buf < bufEnd; buf++) {
+        logger(LogDebug, "%c", *buf);
+        if(buf[0] == '\r' && buf[1] == '\n') {
+            next = buf;
+            break;
+        }
+    }
+    logger(LogDebug, "\n");
+
     if(next == NULL) {
         return NULL;
     } else {

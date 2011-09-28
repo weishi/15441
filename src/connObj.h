@@ -34,7 +34,8 @@ connObj *createConnObj();
 
 /* Getters and Setters */
 int getConnObjSocket(connObj *);
-void getConnObjReadBuffer(connObj *, char **, ssize_t *);
+void getConnObjReadBufferForRead(connObj *, char **, ssize_t *);
+void getConnObjReadBufferForWrite(connObj *, char **, ssize_t *);
 void getConnObjWriteBufferForRead(connObj *, char **, ssize_t *);
 void getConnObjWriteBufferForWrite(connObj *, char **, ssize_t *);
 

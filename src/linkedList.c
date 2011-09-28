@@ -67,45 +67,38 @@ void removeNode(DLL *list, Node *deadNode)
 
 Node *searchList( DLL *list, void *target )
 {
-    Node *ref;
-    if (list->head == NULL) {
-        return NULL;
-    }
-    if (list->compare(list->head->data, target) != 0) {
-        ref = (list->head)->next;
-        while(list->head != ref) {
-            if (list->compare(ref->data, target) == 0) {
-                return ref;
-            } else {
-                ref = ref->next;
-            }
+    Node *ref=list->head;
+    while(ref!=NULL){
+        logger(LogDebug, "comparing\n");
+        if (list->compare(ref->data, target) == 0) {
+             return ref;
+        } else {
+             ref = ref->next;
         }
-    } else {
-        return list->head;
     }
     return NULL;
 
 }
 
-void *getNodeDataAt(DLL *list, int index)
+void *getNodeDataAt(DLL *list, int idx)
 {
-    Node *ref = getNodeAt(list, index);
+    Node *ref = getNodeAt(list, idx);
     return (ref == NULL) ? NULL : ref->data;
 }
 
-void removeNodeAt(DLL *list, int index)
+void removeNodeAt(DLL *list, int idx)
 {
-    removeNode(list, getNodeAt(list, index));
+    removeNode(list, getNodeAt(list, idx));
 }
 
-Node *getNodeAt(DLL *list, int index)
+Node *getNodeAt(DLL *list, int idx)
 {
-    if(index < 0 || index >= list->size) {
+    if(idx < 0 || idx >= list->size) {
         return NULL;
     } else {
         int i;
         Node *ref = list->head;
-        for(i = 0; i < index; i++) {
+        for(i = 0; i < idx; i++) {
             ref = ref->next;
         }
         return ref;

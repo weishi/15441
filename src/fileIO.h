@@ -3,15 +3,19 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
 #include <string.h>
 #include <errno.h>
 #include <time.h>
 #include <sys/stat.h>
 
-char *logFile;
-char *lockFile;
-char *wwwFolder;
-char *CGIFolder;
+#define CUR_LOG_LEVEL LogDebug
+
+char *_lockFile;
+char *_wwwFolder;
+char *_CGIFolder;
+
+FILE* logFD;
 
 enum MIMEType{
     HTML,
@@ -19,6 +23,11 @@ enum MIMEType{
     JPEG,
     PNG,
     OTHER,
+};
+
+enum LogLevel{
+    LogDebug=1,
+    LogProd=2,
 };
 
 typedef struct fileMetadata{
@@ -33,6 +42,8 @@ typedef struct fileMetadata{
 
 
 /* Public methods */
+int initFileIO(char *, char*, char *);
+
 fileMetadata *prepareFile(char *, char*);
 char *loadFile(fileMetadata *fm);
 
@@ -40,6 +51,10 @@ char* getContentType(fileMetadata *fm);
 char* getFilePath(fileMetadata *fm);
 char* getContentLength(fileMetadata *fm);
 time_t getLastMod(fileMetadata *fm);
+
+//Logging
+void logger(enum LogLevel, const char *format, ...);
+int initLogger(char *logFile);
 
 /* Private methods */
 char *createPath(char *dir, char *path, char *fileName);

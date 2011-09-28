@@ -14,6 +14,7 @@ headerEntry *newHeaderEntry(char *key, char *value)
         strcpy(thisValue, value);
     }
     strLower(thisKey);
+    hd->key=thisKey;
     hd->value = thisValue;
     return hd;
 }

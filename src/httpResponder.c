@@ -17,31 +17,45 @@ responseObj *createResponseObj()
     return newObj;
 }
 
+void freeResponseObj(responseObj *res)
+{
+    if(res != NULL) {
+        freeList(res->header);
+        free(res->statusLine);
+        free(res->fileMeta);
+        free(res->headerBuffer);
+        free(res->fileBuffer);
+        free(res);
+    }
+}
+
 void buildResponseObj(responseObj *res, requestObj *req)
 {
     int errorFlag = addStatusLine(res, req);
     DLL *header = res->header;
     /* Add general headers */
+    logger(LogDebug, "to add date\n");
     char *dateStr = getHTTPDate(time(0));
     insertNode(header, newHeaderEntry("date", dateStr));
     free(dateStr);
 
+    logger(LogDebug, "to add server\n");
     insertNode(header, newHeaderEntry("server", "Liso/1.0"));
-
-    insertNode(header, newHeaderEntry("content-encoding", "identity"));
-
 
     if(errorFlag == 1) {
         /* Serve Error request */
+        logger(LogDebug, "to add connection close\n");
         insertNode(header, newHeaderEntry("connection", "close"));
         res->close = 1;
     } else {
         switch(req->method) {
         case POST:
         case GET:
+            logger(LogDebug, "Load file for GET\n");
             res->fileBuffer = loadFile(res->fileMeta);
             res->maxFilePtr = res->fileMeta->length;
-        case HEAD:{
+        case HEAD: {
+            logger(LogDebug, "Add header for HEAD\n");
             char *valBuf;
             char *valPtr;
             //Connection
@@ -50,14 +64,6 @@ void buildResponseObj(responseObj *res, requestObj *req)
                 insertNode(header, newHeaderEntry("connection", "close"));
                 res->close = 1;
             }
-            //Location
-            valPtr = getValueByKey(req->header, "host");
-            valBuf = malloc(strlen(getFilePath(res->fileMeta))
-                            + strlen(valPtr) + 1);
-            strcpy(valBuf, valPtr);
-            strcat(valBuf, getFilePath(res->fileMeta));
-            insertNode(header, newHeaderEntry("location", valBuf));
-            free(valBuf);
             //Content-length
             valBuf = getContentLength(res->fileMeta);
             insertNode(header, newHeaderEntry("content-length", valBuf));
@@ -68,15 +74,15 @@ void buildResponseObj(responseObj *res, requestObj *req)
             //Last-modified
             insertNode(header, newHeaderEntry("last-modified",
                                               getHTTPDate(getLastMod(res->fileMeta))));
-                  }
-            break;
+        }
+        break;
         default:
             break;
         }
-        fillHeader(res);
-        //Combine header + file buffer
-
     }
+    logger(LogDebug, "Fill header...\n");
+    fillHeader(res);
+
 }
 void fillHeader(responseObj *res)
 {
@@ -88,7 +94,7 @@ void fillHeader(responseObj *res)
     res->headerBuffer = malloc(bufSize + 1);
     strcpy(res->headerBuffer, res->statusLine);
     for(i = 0; i < headerSize; i++) {
-        headerEntry *hd = getNodeDataAt(res->header,i);
+        headerEntry *hd = getNodeDataAt(res->header, i);
         lineSize = strlen(hd->key) + strlen(": ") + strlen(hd->value) + strlen("\r\n");
         res->headerBuffer = realloc(res->headerBuffer, bufSize + lineSize + 1);
         sprintf(res->headerBuffer + bufSize, "%s: %s\r\n", hd->key, hd->value);
@@ -99,9 +105,10 @@ void fillHeader(responseObj *res)
     sprintf(res->headerBuffer + bufSize, "\r\n");
     bufSize += lineSize;
     res->maxHeaderPtr = bufSize;
+    logger(LogDebug, "Complete Header: ---------\n%s\n---------\n", res->headerBuffer);
 }
 
-size_t writeResponse(responseObj *res, char *buf, size_t maxSize)
+size_t writeResponse(responseObj *res, char *buf, ssize_t maxSize)
 {
     size_t hdPart = 0;
     size_t fdPart = 0;
@@ -113,6 +120,7 @@ size_t writeResponse(responseObj *res, char *buf, size_t maxSize)
     if(maxSize <= 0) {
         return 0;
     }
+    logger(LogDebug, "header=%d, file=%d\n", maxHeaderPtr - headerPtr, maxFilePtr - filePtr);
     if(headerPtr + maxSize <= maxHeaderPtr) {
         hdPart = maxSize;
     } else {
@@ -122,6 +130,7 @@ size_t writeResponse(responseObj *res, char *buf, size_t maxSize)
             fdPart = maxFilePtr - filePtr;
         }
     }
+    logger(LogDebug, "hdPart=%d, fdPart=%d\n", hdPart, fdPart);
     memcpy(buf, res->headerBuffer, hdPart);
     memcpy(buf + hdPart, res->fileBuffer, fdPart);
     res->headerPtr += hdPart;
@@ -139,7 +148,7 @@ char *getHTTPDate(time_t tmraw)
 {
     char *dateStr = malloc(256);
     struct tm ctm = *gmtime(&tmraw);
-    strftime(dateStr, sizeof(dateStr), "%a, %d %b %Y %H:%M:%S %Z", &ctm);
+    strftime(dateStr, 256, "%a, %d %b %Y %H:%M:%S %Z", &ctm);
     return dateStr;
 }
 
@@ -148,34 +157,34 @@ int addStatusLine(responseObj *res, requestObj *req)
     int errorFlag = 0;
     fileMetadata *fm;
     // 1.request error
-    char *sl = res->statusLine;
-    sl = "HTTP/1.1 200 OK\r\n";
+    char **sl = &res->statusLine;
+    *sl = "HTTP/1.1 200 OK\r\n";
     if(req->curState == requestError) {
         errorFlag = 1;
         switch((enum StatusCode)req->statusCode) {
         case BAD_REQUEST:
-            sl = "HTTP/1.1 400 BAD REQUEST\r\n";
+            *sl = "HTTP/1.1 400 BAD REQUEST\r\n";
             break;
         case NOT_FOUND:
-            sl = "HTTP/1.1 404 NOT FOUND\r\n";
+            *sl = "HTTP/1.1 404 NOT FOUND\r\n";
             break;
         case LENGTH_REQUIRED:
-            sl = "HTTP/1.1 411 LENGTH REQUIRED\r\n";
+            *sl = "HTTP/1.1 411 LENGTH REQUIRED\r\n";
             break;
         case INTERNAL_SERVER_ERROR:
-            sl = "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n";
+            *sl = "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n";
             break;
         case NOT_IMPLEMENTED:
-            sl = "HTTP/1.1 501 NOT IMPLEMENTED\r\n";
+            *sl = "HTTP/1.1 501 NOT IMPLEMENTED\r\n";
             break;
         case SERVICE_UNAVAILABLE:
-            sl = "HTTP/1.1 503 SERVICE UNAVAILABLE\r\n";
+            *sl = "HTTP/1.1 503 SERVICE UNAVAILABLE\r\n";
             break;
         case HTTP_VERSION_NOT_SUPPORTED:
-            sl = "HTTP/1.1 505 HTTP VERSION NOT SUPPORTED\r\n";
+            *sl = "HTTP/1.1 505 HTTP VERSION NOT SUPPORTED\r\n";
             break;
         default:
-            sl = "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n";
+            *sl = "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n";
             break;
         }
     }
@@ -183,7 +192,7 @@ int addStatusLine(responseObj *res, requestObj *req)
     fm = prepareFile(req->uri, "r");
     if(fm == NULL) {
         errorFlag = 1;
-        sl = "HTTP/1.1 404 FILE NOT FOUND\r\n";
+        *sl = "HTTP/1.1 404 FILE NOT FOUND\r\n";
     } else {
         res->fileMeta = fm;
     }
@@ -191,8 +200,4 @@ int addStatusLine(responseObj *res, requestObj *req)
 }
 
 
-void freeResponseObj(responseObj *res)
-{
-    free(res);
-}
 

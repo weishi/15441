@@ -8,6 +8,7 @@
 #include <ctype.h>
 
 #include "common.h"
+#include "fileIO.h"
 #include "linkedList.h"
 #include "httpHeader.h"
 
@@ -69,6 +70,6 @@ enum Status httpParse(requestObj *, char *, ssize_t *);
 void httpParseLine(requestObj *, char *, ssize_t , ssize_t *);
 void setRequestError(requestObj *, enum StatusCode );
 int isValidRequest(requestObj *);
-char* nextToken(char *buf);
+char* nextToken(char *, char *);
 
 #endif
