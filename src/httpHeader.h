@@ -17,7 +17,7 @@ typedef struct headerEntry {
 char *getValueByKey(DLL *, char *);
 headerEntry *newHeaderEntry(char *key, char *value);
 
-
+void printHeaderEntry(void *);
 void freeHeaderEntry(void *);
 int compareHeaderEntry(void *data1, void *data2);
 

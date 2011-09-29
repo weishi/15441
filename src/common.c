@@ -9,3 +9,13 @@ void strLower(char *str)
         }
     }
 }
+
+char *strTrim(char *str){
+    while(isspace(*str)){
+        str++;
+    }
+    if(*str=='\0'){
+        return NULL; //All space
+    }
+    return str;
+}

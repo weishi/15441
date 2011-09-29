@@ -14,7 +14,7 @@ void initEngine(selectEngine *engine,
     engine->portHTTPS = portHTTPS;
     engine->newConnHandler = newConnHandler;
     engine->readConnHandler = readConnHandler;
-    engine->processConnHandler= processConnHandler;
+    engine->processConnHandler = processConnHandler;
     engine->writeConnHandler = writeConnHandler;
     engine->closeConnHandler = closeConnHandler;
 }
@@ -65,21 +65,21 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, selectEngine *en
         int i = 0;
         connObj *connPtr;
         /* Handle existing connections */
-        logger(LogDebug,"HandlePool: Total Existing [%d]\n", numPool);
+        logger(LogDebug, "HandlePool: Total Existing [%d]\n", numPool);
         for(i = 1; i < numPool; i++) {
             connPtr = getNodeDataAt(list, i);
             int connFd = getConnObjSocket(connPtr);
-            logger(LogDebug,"Existing [%d] ", connFd);
+            logger(LogDebug, "Existing [%d] ", connFd);
             if(FD_ISSET(connFd, readPool)) {
-                logger(LogDebug,"Active RD [%d] ", connFd);
+                logger(LogDebug, "Active RD [%d] ", connFd);
                 engine->readConnHandler(connPtr);
-                engine->processConnHandler(connPtr);
             }
+            engine->processConnHandler(connPtr);
             if(FD_ISSET(connFd, writePool)) {
-                logger(LogDebug,"Active WR [%d] ", connFd);
+                logger(LogDebug, "Active WR [%d] ", connFd);
                 engine->writeConnHandler(connPtr);
             }
-            logger(LogDebug,"\n");
+            logger(LogDebug, "\n");
         }
         /* Accept potential new connection */
         connPtr = getNodeDataAt(list, 0);
@@ -87,6 +87,7 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, selectEngine *en
         if(FD_ISSET(listenFd, readPool)) {
             int status = engine->newConnHandler(connPtr);
             if(status > 0) {
+                logger(LogDebug, "New connection accpted\n");
                 insertNode(list, createConnObj(status, BUF_SIZE));
             } else {
                 logger(LogProd, "cannot accept new Conn\n");
@@ -117,17 +118,20 @@ void createPool(DLL *list, fd_set *readPool, fd_set *writePool, int *maxSocket)
         for(i = 1; i < list->size; i++) {
             connPtr = getNodeDataAt(list, i);
             connFd = getConnObjSocket(connPtr);
+            logger(LogDebug, "[%d", connFd);
             if(!isFullConnObj(connPtr)) {
                 FD_SET(connFd, readPool);
                 max = (connFd > max) ? connFd : max;
+                logger(LogDebug, "R");
             }
             if(!isEmptyConnObj(connPtr)) {
                 FD_SET(connFd, writePool);
                 max = (connFd > max) ? connFd : max;
+                logger(LogDebug, "W");
             }
-            logger(LogDebug,"[%d]", connFd);
+            logger(LogDebug, "]");
         }
-        logger(LogDebug," Max = %d\n", max);
+        logger(LogDebug, " Max = %d\n", max);
         *maxSocket = max;
     }
 }

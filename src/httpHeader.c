@@ -10,19 +10,27 @@ headerEntry *newHeaderEntry(char *key, char *value)
     char *thisValue = NULL;
     strcpy(thisKey, key);
     if(value != NULL) {
-        thisValue = malloc(strlen(value) + 1);
-        strcpy(thisValue, value);
+        char *trimed=strTrim(value);
+        thisValue = malloc(strlen(trimed) + 1);
+        strcpy(thisValue, trimed);
     }
     strLower(thisKey);
-    hd->key=thisKey;
+    hd->key = thisKey;
     hd->value = thisValue;
+    //logger(LogDebug, "Node[%s;%s] inserted\n", hd->key, hd->value);
     return hd;
+}
+
+void printHeaderEntry(void *data)
+{
+    headerEntry *hd = (headerEntry *)data;
+    logger(LogDebug, "HeaderEntry[%s,%s]\n", hd->key, hd->value);
 }
 
 void freeHeaderEntry(void *data)
 {
     if(data != NULL) {
-        headerEntry *hd=(headerEntry*)data;
+        headerEntry *hd = (headerEntry *)data;
         free(hd->key);
         free(hd->value);
         free(hd);
@@ -33,7 +41,7 @@ char *getValueByKey(DLL *headerList, char *key)
 {
     headerEntry *target = newHeaderEntry(key, NULL);
     Node *nd = searchList(headerList, target);
-    headerEntry *result = (nd==NULL)? NULL : (headerEntry *)nd->data;
+    headerEntry *result = (nd == NULL) ? NULL : (headerEntry *)nd->data;
     freeHeaderEntry(target);
 
     if(result == NULL) {
@@ -45,8 +53,8 @@ char *getValueByKey(DLL *headerList, char *key)
 
 int compareHeaderEntry(void *data1, void *data2)
 {
-    headerEntry *h1 = (headerEntry*)data1;
-    headerEntry *h2 = (headerEntry*)data2;
+    headerEntry *h1 = (headerEntry *)data1;
+    headerEntry *h2 = (headerEntry *)data2;
     return strcmp(h1->key, h2->key);
 }
 

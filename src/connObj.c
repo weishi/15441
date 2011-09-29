@@ -12,7 +12,9 @@ void freeConnObj(void *data)
     free(connPtr->readBuffer);
     free(connPtr->writeBuffer);
     freeRequestObj(connPtr->req);
+    connPtr->req = NULL;
     freeResponseObj(connPtr->res);
+    connPtr->res = NULL;
     free(connPtr);
 }
 
@@ -31,9 +33,11 @@ connObj *createConnObj(int connFd, ssize_t bufferSize)
     newObj->curWriteSize = 0;
     newObj->maxWriteSize = bufferSize;
     newObj->isOpen = 1;
+    newObj->wbStatus = initRes;
     newObj->readBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
     newObj->writeBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
-    newObj->req=createRequestObj();
+    newObj->req = createRequestObj();
+    newObj->res = NULL;
     return newObj;
 }
 
@@ -45,7 +49,7 @@ int getConnObjSocket(connObj *connPtr)
 
 void getConnObjReadBufferForRead(connObj *connPtr, char **buf, ssize_t *size)
 {
-    *buf = connPtr->readBuffer; 
+    *buf = connPtr->readBuffer;
     *size = connPtr->curReadSize;;
 }
 
@@ -110,7 +114,17 @@ int isFullConnObj(connObj *connPtr)
 
 int isEmptyConnObj(connObj *connPtr)
 {
-    return connPtr->curWriteSize == 0;
+    switch(connPtr->wbStatus) {
+    case initRes:
+        return connPtr->curWriteSize == 0;
+    case writingRes:
+    case lastRes:
+        return 0;
+    case doneRes:
+        return 1;
+    default:
+        return -1;
+    }
 }
 
 

@@ -18,7 +18,8 @@ void processConnectionHandler(connObj *connPtr)
 {
     char *buf;
     ssize_t size, retSize;
-    if(connPtr->isOpen==0){
+    int done;
+    if(connPtr->isOpen == 0) {
         logger(LogDebug, "Skip connection set to close\n");
         return;
     }
@@ -38,20 +39,22 @@ void processConnectionHandler(connObj *connPtr)
         logger(LogDebug, "Dump response to buffer\n");
         getConnObjWriteBufferForWrite(connPtr, &buf, &size);
         logger(LogDebug, "Write buffer has %d bytes free\n", size);
-        retSize = writeResponse(connPtr->res, buf, size);
-        if(retSize == 0) {
+        done = writeResponse(connPtr->res, buf, size, &retSize);
+        logger(LogDebug, "%d bytes dumped, done? %d\n", retSize, done);
+        addConnObjWriteSize(connPtr, retSize);
+        connPtr->wbStatus=writingRes;
+        if(done) {
             logger(LogDebug, "All dumped\n");
+            connPtr->wbStatus=lastRes;
             if(1 == toClose(connPtr->res)) {
+                logger(LogDebug, "[%d] is set to close.\n", connPtr->connFd);
                 setConnObjClose(connPtr);
             }
             /* Prepare for next request */
             freeResponseObj(connPtr->res);
-            connPtr->res=NULL;
+            connPtr->res = NULL;
             freeRequestObj(connPtr->req);
             connPtr->req = createRequestObj();
-        } else {
-            logger(LogDebug, "%d bytes dumped\n", retSize);
-            addConnObjWriteSize(connPtr, retSize);
         }
         logger(LogDebug, "Return from httpParse\n");
         break;
@@ -85,7 +88,7 @@ void readConnectionHandler(connObj *connPtr)
             setConnObjClose(connPtr);
             return;
         } else {
-            logger(LogDebug, "Read %d bytes\n",readret);
+            logger(LogDebug, "Read %d bytes\n", readret);
             addConnObjReadSize(connPtr, readret);
         }
 
@@ -100,11 +103,15 @@ void writeConnectionHandler(connObj *connPtr)
     ssize_t size;
     int connFd = getConnObjSocket(connPtr);
     getConnObjWriteBufferForRead(connPtr, &buf, &size);
-    logger(LogDebug, "Ready to write %d bytes\n",size);
+    logger(LogDebug, "Ready to write %d bytes...", size);
     if (send(connFd, buf, size, 0) != size) {
         logger(LogProd, "Error sending to client.\n");
         setConnObjClose(connPtr);
     } else {
+        if(connPtr->wbStatus==lastRes){
+            connPtr->wbStatus=doneRes;
+        }
+        logger(LogDebug, "Done\n");
         removeConnObjWriteSize(connPtr, size);
     }
 

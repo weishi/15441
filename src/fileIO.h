@@ -22,6 +22,7 @@ enum MIMEType{
     CSS,
     JPEG,
     PNG,
+    GIF,
     OTHER,
 };
 
@@ -45,6 +46,7 @@ typedef struct fileMetadata{
 int initFileIO(char *, char*, char *);
 
 fileMetadata *prepareFile(char *, char*);
+void freeFileMeta(fileMetadata *);
 char *loadFile(fileMetadata *fm);
 
 char* getContentType(fileMetadata *fm);

@@ -16,11 +16,16 @@ requestObj *createRequestObj()
 }
 void freeRequestObj(requestObj *req)
 {
-    if(req!=NULL){
+    if(req != NULL) {
+        logger(LogDebug, "Staring free Req: ");
         free(req->uri);
-    free(req->content);
-    freeList(req->header);
-    free(req);
+        logger(LogDebug, "-uri");
+        free(req->content);
+        logger(LogDebug, "-content");
+        freeList(req->header);
+        logger(LogDebug, "-header");
+        free(req);
+        logger(LogDebug, "-Done\n");
     }
 }
 
@@ -45,12 +50,10 @@ enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size)
             nextPtr = nextToken(thisPtr, bufEnd);
         }
         if(nextPtr != NULL) {
-            logger(LogDebug, "hasNext\n");
             parsedSize = (size_t)(nextPtr - thisPtr);
             httpParseLine(req, thisPtr, parsedSize, &parsedSize);
             logger(LogDebug, "One line parsed\n");
         } else {
-            logger(LogDebug, "noNext\n");
             break;
         }
         if(req->curState == requestError ) {
@@ -99,7 +102,7 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
         if(sscanf(line, "%s %s HTTP/1.%d\r\n", method, uri, &version) != 3) {
             setRequestError(req, BAD_REQUEST);
         } else {
-            logger(LogDebug, "Parsed Status Line:\n Method = %s\nURI = %s\nVersion = %d\n",
+            logger(LogDebug, "Parsed Status Line: Method = %s, URI = %s, Version = %d\n",
                    method, uri, version);
             int numMethods = sizeof(methodTable) / sizeof(methodEntry);
             int i;
@@ -129,9 +132,8 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
     break;
     case headerLine: {
         logger(LogDebug, "curState: headerLine\n");
-        if(lineSize==2 && line[0]=='\r' && line[1]=='\n') {
-                logger(LogDebug, "Header Close line\n");
-
+        if(lineSize == 2 && line[0] == '\r' && line[1] == '\n') {
+            logger(LogDebug, "Header Close line\n");
             if(isValidRequest(req)) {
                 logger(LogDebug, "isValid\n");
                 if(req->method == GET || req->method == HEAD) {
@@ -153,9 +155,7 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
             } else {
                 key = realloc(key, strlen(key) + 1);
                 value = realloc(value, strlen(value) + 1);
-                logger(LogDebug, "Before[%s,%s]\n", key, value);
                 insertNode(req->header, newHeaderEntry(key, value));
-                logger(LogDebug, "After[%s,%s]\n",key, value);
             }
             free(key);
             free(value);
@@ -207,13 +207,10 @@ int isValidRequest(requestObj *req)
     }
     case HEAD:
     case GET: {
-        logger(LogDebug, "Test Host\n");
         char *host = getValueByKey(req->header, "host");
         if(host == NULL) {
-            logger(LogDebug, "No Host\n");
             return 0;
         } else {
-            logger(LogDebug, "Has Host\n");
             return 1;
         }
     }

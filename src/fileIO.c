@@ -12,6 +12,13 @@ int initFileIO(char *lockFile, char *wwwFolder, char *CGIFolder)
     return 0;
 }
 
+void freeFileMeta(fileMetadata *fm)
+{
+    if(fm != NULL) {
+        free(fm->path);
+        free(fm);
+    }
+}
 
 fileMetadata *prepareFile(char *uri, char *mode)
 {
@@ -27,11 +34,19 @@ fileMetadata *prepareFile(char *uri, char *mode)
     logger(LogDebug, "FilePath:[%s]\n", path);
     if(stat(path, &fileStat) != 0) {
         return NULL;
+    }else{
+        if(S_ISDIR(fileStat.st_mode)){
+            free(path);
+            path=createPath(_wwwFolder, uri, "/index.html");
+        }
     }
+    
     fd = fopen(path, mode);
     if(fd == NULL) {
+        logger(LogDebug, "Failed open\n");
         return NULL;
     } else {
+        logger(LogDebug, "Opened\n");
         fm = malloc(sizeof(fileMetadata));
         fm->fd = fd;
         fm->path = path;
@@ -68,8 +83,10 @@ char *getContentType(fileMetadata *fm)
         return "image/jpeg";
     case PNG:
         return "image/png";
+    case GIF:
+        return "image/gif";
     default:
-        return "other/type";
+        return "application/octet-stream";
     }
 }
 
@@ -118,7 +135,13 @@ enum MIMEType getFileType(char *path)
         return OTHER;
     } else {
         char *ext = strrchr(path, '.');
+        if(ext == NULL) {
+            return OTHER;
+        }
         if(strcmp(ext, ".html") == 0) {
+            return HTML;
+        }
+        if(strcmp(ext, ".htm") == 0) {
             return HTML;
         }
         if(strcmp(ext, ".css") == 0) {
@@ -129,6 +152,9 @@ enum MIMEType getFileType(char *path)
         }
         if(strcmp(ext, ".jpeg") == 0) {
             return JPEG;
+        }
+        if(strcmp(ext, ".gif") == 0) {
+            return GIF;
         }
         return OTHER;
     }
@@ -141,9 +167,15 @@ char *createPath(char *dir, char *path, char *fileName)
     int pathLength = (path == NULL) ? 0 : strlen(path);
     int fileLength = (fileName == NULL) ? 0 : strlen(fileName);
     char *fullPath = malloc(dirLength + pathLength + fileLength + 1);
-    strcpy(fullPath, dir);
-    strcat(fullPath, path);
-    strcat(fullPath, fileName);
+    if(dir != NULL) {
+        strcpy(fullPath, dir);
+    }
+    if(path != NULL) {
+        strcat(fullPath, path);
+    }
+    if(fileName != NULL) {
+        strcat(fullPath, fileName);
+    }
     return fullPath;
 }
 

@@ -50,9 +50,13 @@ void removeNode(DLL *list, Node *deadNode)
         return;
     }
 
-    if(ref->prev == NULL) {
+    if(ref->prev == NULL && ref->next==NULL) {
+        //Singleton
+        list->head=NULL;
+    }else if(ref->prev == NULL && ref->next!=NULL) {
         //Remove from beginning
         list->head = ref->next;
+        ref->next->prev=NULL;
     } else if(ref->next == NULL) {
         //Remove from end
         ref->prev->next = NULL;
@@ -69,7 +73,6 @@ Node *searchList( DLL *list, void *target )
 {
     Node *ref=list->head;
     while(ref!=NULL){
-        logger(LogDebug, "comparing\n");
         if (list->compare(ref->data, target) == 0) {
              return ref;
         } else {

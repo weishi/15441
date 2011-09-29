@@ -10,6 +10,13 @@
 //#include "httpParser.h"
 #include "httpResponder.h"
 
+enum writeStatus {
+    initRes,
+    writingRes,
+    lastRes,
+    doneRes,
+};
+
 typedef struct connObj {
     int connFd;
     ssize_t curReadSize;
@@ -17,6 +24,7 @@ typedef struct connObj {
     ssize_t curWriteSize;
     ssize_t maxWriteSize;
     int isOpen;
+    enum writeStatus wbStatus;
     char *readBuffer;
     char *writeBuffer;
     requestObj *req;

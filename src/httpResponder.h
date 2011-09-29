@@ -28,7 +28,7 @@ typedef struct responseObj {
 /* Public methods */
 responseObj *createResponseObj();
 void freeResponseObj(responseObj *);
-size_t writeResponse(responseObj *, char *, ssize_t );
+int writeResponse(responseObj *, char *, ssize_t , ssize_t *);
 void buildResponseObj(responseObj *, requestObj *);
 int toClose(responseObj *);
 

@@ -4,7 +4,7 @@ responseObj *createResponseObj()
 {
     responseObj *newObj = malloc(sizeof(responseObj));
     newObj->header = malloc(sizeof(DLL));
-    initList(newObj->header, NULL, NULL, NULL);
+    initList(newObj->header, compareHeaderEntry, freeHeaderEntry, NULL);
     newObj->statusLine = NULL;
     newObj->fileMeta = NULL;
     newObj->headerBuffer = NULL;
@@ -20,12 +20,17 @@ responseObj *createResponseObj()
 void freeResponseObj(responseObj *res)
 {
     if(res != NULL) {
+        logger(LogDebug, "Staring free Res: ");
         freeList(res->header);
-        free(res->statusLine);
-        free(res->fileMeta);
+        logger(LogDebug, "-Header");
+        freeFileMeta(res->fileMeta);
+        logger(LogDebug, "-fileMeta");
         free(res->headerBuffer);
+        logger(LogDebug, "-Headerbuf");
         free(res->fileBuffer);
+        logger(LogDebug, "-Filebuf");
         free(res);
+        logger(LogDebug, "-Done\n");
     }
 }
 
@@ -34,12 +39,10 @@ void buildResponseObj(responseObj *res, requestObj *req)
     int errorFlag = addStatusLine(res, req);
     DLL *header = res->header;
     /* Add general headers */
-    logger(LogDebug, "to add date\n");
     char *dateStr = getHTTPDate(time(0));
     insertNode(header, newHeaderEntry("date", dateStr));
     free(dateStr);
 
-    logger(LogDebug, "to add server\n");
     insertNode(header, newHeaderEntry("server", "Liso/1.0"));
 
     if(errorFlag == 1) {
@@ -82,23 +85,33 @@ void buildResponseObj(responseObj *res, requestObj *req)
     }
     logger(LogDebug, "Fill header...\n");
     fillHeader(res);
-
 }
 void fillHeader(responseObj *res)
 {
-    int headerSize = res->header->size;
+    static char *responseOrder[] = {
+        "Connection",
+        "Date",
+        "Server",
+        "Content-length",
+        "Content-type",
+        "Last-modified",
+    };
     size_t bufSize = 0;
     size_t lineSize;
-    int i;
+    unsigned int i;
+
     bufSize += strlen(res->statusLine);
     res->headerBuffer = malloc(bufSize + 1);
     strcpy(res->headerBuffer, res->statusLine);
-    for(i = 0; i < headerSize; i++) {
-        headerEntry *hd = getNodeDataAt(res->header, i);
-        lineSize = strlen(hd->key) + strlen(": ") + strlen(hd->value) + strlen("\r\n");
-        res->headerBuffer = realloc(res->headerBuffer, bufSize + lineSize + 1);
-        sprintf(res->headerBuffer + bufSize, "%s: %s\r\n", hd->key, hd->value);
-        bufSize += lineSize;
+    for(i = 0; i < sizeof(responseOrder) / sizeof(char *); i++) {
+        char *key = responseOrder[i];
+        char *value = getValueByKey(res->header, key);
+        if(value != NULL) {
+            lineSize = strlen(key) + strlen(": ") + strlen(value) + strlen("\r\n");
+            res->headerBuffer = realloc(res->headerBuffer, bufSize + lineSize + 1);
+            sprintf(res->headerBuffer + bufSize, "%s: %s\r\n", key, value);
+            bufSize += lineSize;
+        }
     }
     lineSize = strlen("\r\n");
     res->headerBuffer = realloc(res->headerBuffer, bufSize + lineSize + 1);
@@ -108,7 +121,7 @@ void fillHeader(responseObj *res)
     logger(LogDebug, "Complete Header: ---------\n%s\n---------\n", res->headerBuffer);
 }
 
-size_t writeResponse(responseObj *res, char *buf, ssize_t maxSize)
+int writeResponse(responseObj *res, char *buf, ssize_t maxSize, ssize_t *retSize)
 {
     size_t hdPart = 0;
     size_t fdPart = 0;
@@ -118,9 +131,10 @@ size_t writeResponse(responseObj *res, char *buf, ssize_t maxSize)
     size_t maxFilePtr = res->maxFilePtr;
 
     if(maxSize <= 0) {
+        *retSize=0;
         return 0;
     }
-    logger(LogDebug, "header=%d, file=%d\n", maxHeaderPtr - headerPtr, maxFilePtr - filePtr);
+    logger(LogDebug, "Remain header =%d, file=%d\n", maxHeaderPtr - headerPtr, maxFilePtr - filePtr);
     if(headerPtr + maxSize <= maxHeaderPtr) {
         hdPart = maxSize;
     } else {
@@ -130,13 +144,13 @@ size_t writeResponse(responseObj *res, char *buf, ssize_t maxSize)
             fdPart = maxFilePtr - filePtr;
         }
     }
-    logger(LogDebug, "hdPart=%d, fdPart=%d\n", hdPart, fdPart);
+    logger(LogDebug, "Dump hdPart=%d, fdPart=%d\n", hdPart, fdPart);
     memcpy(buf, res->headerBuffer, hdPart);
     memcpy(buf + hdPart, res->fileBuffer, fdPart);
     res->headerPtr += hdPart;
     res->filePtr += fdPart;
-
-    return hdPart + fdPart;
+    *retSize=hdPart+fdPart;
+    return (res->headerPtr == maxHeaderPtr && res->filePtr==maxFilePtr);
 }
 
 int toClose(responseObj *res)
@@ -154,6 +168,7 @@ char *getHTTPDate(time_t tmraw)
 
 int addStatusLine(responseObj *res, requestObj *req)
 {
+    logger(LogDebug, "To add status line\n");
     int errorFlag = 0;
     fileMetadata *fm;
     // 1.request error
@@ -188,12 +203,15 @@ int addStatusLine(responseObj *res, requestObj *req)
             break;
         }
     }
+    logger(LogDebug, "To parpare file\n");
     // 2.file error
     fm = prepareFile(req->uri, "r");
     if(fm == NULL) {
+        logger(LogDebug, "Failed parpared file\n");
         errorFlag = 1;
         *sl = "HTTP/1.1 404 FILE NOT FOUND\r\n";
     } else {
+        logger(LogDebug, "Success parpared file\n");
         res->fileMeta = fm;
     }
     return errorFlag;
