@@ -18,16 +18,18 @@ void processConnectionHandler(connObj *connPtr)
 {
     char *buf;
     ssize_t size, retSize;
-    int done;
+    int done, full;
     if(connPtr->isOpen == 0) {
         logger(LogDebug, "Skip connection set to close\n");
         return;
     }
     getConnObjReadBufferForRead(connPtr, &buf, &size);
-    switch(httpParse(connPtr->req, buf, &size)) {
+    full=isFullConnObj(connPtr); 
+    switch(httpParse(connPtr->req, buf, &size, full)) {
     case Parsing:
         removeConnObjReadSize(connPtr, size);
         break;
+    case ParseError:
     case Parsed:
         removeConnObjReadSize(connPtr, size);
         if(connPtr->res == NULL) {
@@ -48,9 +50,6 @@ void processConnectionHandler(connObj *connPtr)
             connPtr->wbStatus = lastRes;
         }
         logger(LogDebug, "Return from httpParse\n");
-        break;
-    case ParseError:
-        setConnObjClose(connPtr);
         break;
     default:
         break;

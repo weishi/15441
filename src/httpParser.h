@@ -64,7 +64,7 @@ typedef struct requestObj {
 /* Public methods */
 requestObj *createRequestObj();
 void freeRequestObj(requestObj*);
-enum Status httpParse(requestObj *, char *, ssize_t *);
+enum Status httpParse(requestObj *, char *, ssize_t *, int);
 
 /* Private methods */
 void httpParseLine(requestObj *, char *, ssize_t , ssize_t *);

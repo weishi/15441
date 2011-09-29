@@ -30,12 +30,17 @@ void freeRequestObj(requestObj *req)
 }
 
 
-enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size)
+enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size, int full)
 {
     if(req == NULL || req->curState == requestDone) {
         *size = 0;
         logger(LogDebug, "Existing ReqObj. No Parsing Needed\n");
         return Parsed;
+    }
+    if(req->curState == requestError) {
+        *size = 0;
+        logger(LogDebug, "RequestError. No Parsing Needed\n");
+        return ParseError;
     }
     ssize_t curSize = *size;
     char *bufEnd = bufPtr + curSize;
@@ -43,11 +48,19 @@ enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size)
     char *nextPtr;
     ssize_t parsedSize;
     logger(LogDebug, "Start parsing %d bytes\n", *size);
+
     while(1) {
         if(req->curState == content) {
             nextPtr = bufEnd + 1;
         } else {
             nextPtr = nextToken(thisPtr, bufEnd);
+            if(nextPtr == NULL && full) {
+                /* Reject header longer than buffer size */
+                setRequestError(req, BAD_REQUEST);
+                break;
+            } else {
+                full = 0;
+            }
         }
         if(nextPtr != NULL) {
             parsedSize = (size_t)(nextPtr - thisPtr);
@@ -172,15 +185,15 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
         }
         if(length - curLength <= lineSize) {
             size_t readSize = length - curLength;
-            req->content = realloc(req->content, length+1);
-            req->content[length]='\0';
+            req->content = realloc(req->content, length + 1);
+            req->content[length] = '\0';
             memcpy(req->content + curLength, line, readSize);
             req->contentLength = length;
             req->curState = requestDone;
             *parsedSize = readSize;
         } else {
-            req->content = realloc(req->content, curLength + lineSize+1);
-            req->content[curLength+lineSize]='\0';
+            req->content = realloc(req->content, curLength + lineSize + 1);
+            req->content[curLength+lineSize] = '\0';
             memcpy(req->content + curLength, line, lineSize);
             req->contentLength = curLength + lineSize;
             req->curState = content;
@@ -272,7 +285,7 @@ void printRequest(const requestObj *req)
     logger(LogProd, "-URI: %s\n", req->uri);
     logger(LogProd, "-Version: HTTP/1.%d\n", req->version);
     applyList(req->header, printHeaderEntry);
-    if(req->contentLength>0){
+    if(req->contentLength > 0) {
         logger(LogProd, "-Content : %s\n", req->content);
     }
     logger(LogProd, "----End New Request----\n");

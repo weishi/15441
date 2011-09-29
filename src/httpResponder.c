@@ -210,17 +210,18 @@ int addStatusLine(responseObj *res, requestObj *req)
             *sl = "HTTP/1.1 500 INTERNAL SERVER ERROR\r\n";
             break;
         }
-    }
-    logger(LogDebug, "To parpare file\n");
-    // 2.file error
-    fm = prepareFile(req->uri, "r");
-    if(fm == NULL) {
-        logger(LogDebug, "Failed parpared file\n");
-        errorFlag = 1;
-        *sl = "HTTP/1.1 404 FILE NOT FOUND\r\n";
     } else {
-        logger(LogDebug, "Success parpared file\n");
-        res->fileMeta = fm;
+        logger(LogDebug, "To parpare file\n");
+        // 2.file error
+        fm = prepareFile(req->uri, "r");
+        if(fm == NULL) {
+            logger(LogDebug, "Failed parpared file\n");
+            errorFlag = 1;
+            *sl = "HTTP/1.1 404 FILE NOT FOUND\r\n";
+        } else {
+            logger(LogDebug, "Success parpared file\n");
+            res->fileMeta = fm;
+        }
     }
     return errorFlag;
 }
