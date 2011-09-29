@@ -40,6 +40,7 @@ void *getNodeDataAt(DLL *, int );
 Node *getNodeAt(DLL *, int );
 
 void mapNode(DLL *);
+void applyList(DLL *, void (*applyMe)(void *) );
 
 int compareInt(void *data1, void *data2);
 void freeInt(void *data);

@@ -24,7 +24,7 @@ headerEntry *newHeaderEntry(char *key, char *value)
 void printHeaderEntry(void *data)
 {
     headerEntry *hd = (headerEntry *)data;
-    logger(LogDebug, "HeaderEntry[%s,%s]\n", hd->key, hd->value);
+    logger(LogDebug, "-[%s: %s]\n", hd->key, hd->value);
 }
 
 void freeHeaderEntry(void *data)

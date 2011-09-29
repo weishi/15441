@@ -36,4 +36,5 @@ int toClose(responseObj *);
 void fillHeader(responseObj *);
 char *getHTTPDate(time_t);
 int addStatusLine(responseObj *res, requestObj *req);
+void printResponse(responseObj *);
 #endif

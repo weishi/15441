@@ -42,19 +42,10 @@ void processConnectionHandler(connObj *connPtr)
         done = writeResponse(connPtr->res, buf, size, &retSize);
         logger(LogDebug, "%d bytes dumped, done? %d\n", retSize, done);
         addConnObjWriteSize(connPtr, retSize);
-        connPtr->wbStatus=writingRes;
+        connPtr->wbStatus = writingRes;
         if(done) {
             logger(LogDebug, "All dumped\n");
-            connPtr->wbStatus=lastRes;
-            if(1 == toClose(connPtr->res)) {
-                logger(LogDebug, "[%d] is set to close.\n", connPtr->connFd);
-                setConnObjClose(connPtr);
-            }
-            /* Prepare for next request */
-            freeResponseObj(connPtr->res);
-            connPtr->res = NULL;
-            freeRequestObj(connPtr->req);
-            connPtr->req = createRequestObj();
+            connPtr->wbStatus = lastRes;
         }
         logger(LogDebug, "Return from httpParse\n");
         break;
@@ -80,11 +71,11 @@ void readConnectionHandler(connObj *connPtr)
 
         readret = recv(connFd, buf, size, 0);
         if (readret == -1) {
-            logger(LogProd, "Error reading from client socket.\n");
+            logger(LogProd, "Error reading from client.\n");
             setConnObjClose(connPtr);
             return;
         } else if(readret == 0) {
-            logger(LogDebug, "[%d] Close", connFd);
+            logger(LogDebug, "Client Closed [%d]", connFd);
             setConnObjClose(connPtr);
             return;
         } else {
@@ -108,8 +99,18 @@ void writeConnectionHandler(connObj *connPtr)
         logger(LogProd, "Error sending to client.\n");
         setConnObjClose(connPtr);
     } else {
-        if(connPtr->wbStatus==lastRes){
-            connPtr->wbStatus=doneRes;
+        if(connPtr->wbStatus == lastRes) {
+            connPtr->wbStatus = doneRes;
+            if(1 == toClose(connPtr->res)) {
+                logger(LogDebug, "[%d] set to close.\n", connPtr->connFd);
+                setConnObjClose(connPtr);
+            } else {
+                /* Prepare for next request */
+                freeResponseObj(connPtr->res);
+                connPtr->res = NULL;
+                freeRequestObj(connPtr->req);
+                connPtr->req = createRequestObj();
+            }
         }
         logger(LogDebug, "Done\n");
         removeConnObjWriteSize(connPtr, size);

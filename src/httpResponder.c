@@ -52,11 +52,11 @@ void buildResponseObj(responseObj *res, requestObj *req)
         res->close = 1;
     } else {
         switch(req->method) {
-        case POST:
         case GET:
             logger(LogDebug, "Load file for GET\n");
             res->fileBuffer = loadFile(res->fileMeta);
             res->maxFilePtr = res->fileMeta->length;
+        case POST:
         case HEAD: {
             logger(LogDebug, "Add header for HEAD\n");
             char *valBuf;
@@ -85,6 +85,7 @@ void buildResponseObj(responseObj *res, requestObj *req)
     }
     logger(LogDebug, "Fill header...\n");
     fillHeader(res);
+    printResponse(res);
 }
 void fillHeader(responseObj *res)
 {
@@ -118,7 +119,13 @@ void fillHeader(responseObj *res)
     sprintf(res->headerBuffer + bufSize, "\r\n");
     bufSize += lineSize;
     res->maxHeaderPtr = bufSize;
-    logger(LogDebug, "Complete Header: ---------\n%s\n---------\n", res->headerBuffer);
+}
+
+void printResponse(responseObj *res)
+{
+    logger(LogProd, "----Begin New Response----\n");
+    logger(LogProd, "%s\n", res->headerBuffer);
+    logger(LogProd, "----End New Response----\n");
 }
 
 int writeResponse(responseObj *res, char *buf, ssize_t maxSize, ssize_t *retSize)
@@ -129,9 +136,10 @@ int writeResponse(responseObj *res, char *buf, ssize_t maxSize, ssize_t *retSize
     size_t maxHeaderPtr = res->maxHeaderPtr;
     size_t filePtr = res->filePtr;
     size_t maxFilePtr = res->maxFilePtr;
-
+    char *headerBuf = res->headerBuffer;
+    char *fileBuf = res->fileBuffer;
     if(maxSize <= 0) {
-        *retSize=0;
+        *retSize = 0;
         return 0;
     }
     logger(LogDebug, "Remain header =%d, file=%d\n", maxHeaderPtr - headerPtr, maxFilePtr - filePtr);
@@ -145,12 +153,12 @@ int writeResponse(responseObj *res, char *buf, ssize_t maxSize, ssize_t *retSize
         }
     }
     logger(LogDebug, "Dump hdPart=%d, fdPart=%d\n", hdPart, fdPart);
-    memcpy(buf, res->headerBuffer, hdPart);
-    memcpy(buf + hdPart, res->fileBuffer, fdPart);
+    memcpy(buf, headerBuf + res->headerPtr, hdPart);
+    memcpy(buf + hdPart, fileBuf + res->filePtr, fdPart);
     res->headerPtr += hdPart;
     res->filePtr += fdPart;
-    *retSize=hdPart+fdPart;
-    return (res->headerPtr == maxHeaderPtr && res->filePtr==maxFilePtr);
+    *retSize = hdPart + fdPart;
+    return (res->headerPtr == maxHeaderPtr && res->filePtr == maxFilePtr);
 }
 
 int toClose(responseObj *res)

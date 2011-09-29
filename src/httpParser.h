@@ -71,5 +71,5 @@ void httpParseLine(requestObj *, char *, ssize_t , ssize_t *);
 void setRequestError(requestObj *, enum StatusCode );
 int isValidRequest(requestObj *);
 char* nextToken(char *, char *);
-
+void printRequest(const requestObj *);
 #endif

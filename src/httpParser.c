@@ -78,6 +78,7 @@ enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size)
         return ParseError;
     } else if(req->curState == requestDone) {
         logger(LogDebug, "Parsing result: done\n");
+        printRequest(req);
         return Parsed;
     } else {
         logger(LogDebug, "Parsing result: parsing\n");
@@ -171,13 +172,15 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
         }
         if(length - curLength <= lineSize) {
             size_t readSize = length - curLength;
-            req->content = realloc(req->content, length);
+            req->content = realloc(req->content, length+1);
+            req->content[length]='\0';
             memcpy(req->content + curLength, line, readSize);
             req->contentLength = length;
             req->curState = requestDone;
             *parsedSize = readSize;
         } else {
-            req->content = realloc(req->content, curLength + lineSize);
+            req->content = realloc(req->content, curLength + lineSize+1);
+            req->content[curLength+lineSize]='\0';
             memcpy(req->content + curLength, line, lineSize);
             req->contentLength = curLength + lineSize;
             req->curState = content;
@@ -201,8 +204,6 @@ int isValidRequest(requestObj *req)
         char *length = getValueByKey(req->header, "content-length");
         if(length == NULL) {
             return 0;
-        } else {
-            return 1;
         }
     }
     case HEAD:
@@ -213,6 +214,7 @@ int isValidRequest(requestObj *req)
         } else {
             return 1;
         }
+        break;
     }
     case UNIMPLEMENTED:
     default:
@@ -247,4 +249,38 @@ char *nextToken(char *buf, char *bufEnd)
         return next + 2;
     }
 }
+
+void printRequest(const requestObj *req)
+{
+    logger(LogProd, "----Begin New Request----\n");
+
+    logger(LogProd, "-Method: ");
+    switch(req->method) {
+    case GET:
+        logger(LogProd, "GET\n");
+        break;
+    case HEAD:
+        logger(LogProd, "HEAD\n");
+        break;
+    case POST:
+        logger(LogProd, "POST\n");
+        break;
+    default:
+        logger(LogProd, "OTHER\n");
+        break;
+    }
+    logger(LogProd, "-URI: %s\n", req->uri);
+    logger(LogProd, "-Version: HTTP/1.%d\n", req->version);
+    applyList(req->header, printHeaderEntry);
+    if(req->contentLength>0){
+        logger(LogProd, "-Content : %s\n", req->content);
+    }
+    logger(LogProd, "----End New Request----\n");
+
+}
+
+
+
+
+
 

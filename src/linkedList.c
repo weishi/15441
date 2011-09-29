@@ -12,12 +12,24 @@ void initList(DLL *list,
     list->map = map;
 }
 
-void freeList(DLL* list){
-    if(list!=NULL){
-        while(list->size>0){
+void freeList(DLL *list)
+{
+    if(list != NULL) {
+        while(list->size > 0) {
             removeNodeAt(list, 0);
         }
         free(list);
+    }
+}
+
+void applyList(DLL *list, void (*applyMe)(void *) )
+{
+    int i = 0;
+    Node *ref = list->head;
+    while(i < list->size) {
+        applyMe(ref->data);
+        ref = ref->next;
+        i++;
     }
 }
 
@@ -50,13 +62,13 @@ void removeNode(DLL *list, Node *deadNode)
         return;
     }
 
-    if(ref->prev == NULL && ref->next==NULL) {
+    if(ref->prev == NULL && ref->next == NULL) {
         //Singleton
-        list->head=NULL;
-    }else if(ref->prev == NULL && ref->next!=NULL) {
+        list->head = NULL;
+    } else if(ref->prev == NULL && ref->next != NULL) {
         //Remove from beginning
         list->head = ref->next;
-        ref->next->prev=NULL;
+        ref->next->prev = NULL;
     } else if(ref->next == NULL) {
         //Remove from end
         ref->prev->next = NULL;
@@ -71,12 +83,12 @@ void removeNode(DLL *list, Node *deadNode)
 
 Node *searchList( DLL *list, void *target )
 {
-    Node *ref=list->head;
-    while(ref!=NULL){
+    Node *ref = list->head;
+    while(ref != NULL) {
         if (list->compare(ref->data, target) == 0) {
-             return ref;
+            return ref;
         } else {
-             ref = ref->next;
+            ref = ref->next;
         }
     }
     return NULL;
