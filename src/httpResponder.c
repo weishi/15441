@@ -52,11 +52,11 @@ void buildResponseObj(responseObj *res, requestObj *req)
         res->close = 1;
     } else {
         switch(req->method) {
+        case POST:
         case GET:
             logger(LogDebug, "Load file for GET\n");
             res->fileBuffer = loadFile(res->fileMeta);
             res->maxFilePtr = res->fileMeta->length;
-        case POST:
         case HEAD: {
             logger(LogDebug, "Add header for HEAD\n");
             char *valBuf;
@@ -66,6 +66,8 @@ void buildResponseObj(responseObj *res, requestObj *req)
             if(valPtr != NULL && strcmp(valPtr, "close") == 0) {
                 insertNode(header, newHeaderEntry("connection", "close"));
                 res->close = 1;
+            }else{
+                insertNode(header, newHeaderEntry("connection", "Keep-Alive"));
             }
             //Content-length
             valBuf = getContentLength(res->fileMeta);

@@ -24,7 +24,7 @@ void processConnectionHandler(connObj *connPtr)
         return;
     }
     getConnObjReadBufferForRead(connPtr, &buf, &size);
-    full=isFullConnObj(connPtr); 
+    full = isFullConnObj(connPtr);
     switch(httpParse(connPtr->req, buf, &size, full)) {
     case Parsing:
         removeConnObjReadSize(connPtr, size);
@@ -90,12 +90,19 @@ void readConnectionHandler(connObj *connPtr)
 void writeConnectionHandler(connObj *connPtr)
 {
     char *buf;
-    ssize_t size;
+    ssize_t size, retSize;
     int connFd = getConnObjSocket(connPtr);
     getConnObjWriteBufferForRead(connPtr, &buf, &size);
     logger(LogDebug, "Ready to write %d bytes...", size);
-    if (send(connFd, buf, size, 0) != size) {
-        logger(LogProd, "Error sending to client.\n");
+    if(size <= 0) {
+        return;
+    }
+    retSize = send(connFd, buf, size, 0);
+    if(retSize == -1 && errno == EINTR) {
+        return ;
+    }
+    if (retSize != size) {
+        logger(LogProd, "WTFError sending to client.\n");
         setConnObjClose(connPtr);
     } else {
         if(connPtr->wbStatus == lastRes) {

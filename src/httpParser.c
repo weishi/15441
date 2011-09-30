@@ -51,7 +51,7 @@ enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size, int full)
 
     while(1) {
         if(req->curState == content) {
-            nextPtr = bufEnd + 1;
+            nextPtr = bufEnd;
         } else {
             nextPtr = nextToken(thisPtr, bufEnd);
             if(nextPtr == NULL && full) {
@@ -74,7 +74,7 @@ enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size, int full)
         }
         /* Prepare for next line */
         thisPtr = thisPtr + parsedSize;
-        if(thisPtr > bufEnd) {
+        if(thisPtr >= bufEnd) {
             break;
         }
         if(req->curState == requestDone) {
@@ -83,7 +83,7 @@ enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size, int full)
     }
     /* clean up parsed buffer */
     if(thisPtr < bufEnd) {
-        *size = bufEnd - thisPtr;
+        *size = thisPtr - (bufEnd - curSize);
     }
     /* Set return status */
     if(req->curState == requestError) {
@@ -112,12 +112,16 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
     case requestLine: {
         char *method = malloc(lineSize + 1);
         char *uri = malloc(lineSize + 1);
-        int version;
-        if(sscanf(line, "%s %s HTTP/1.%d\r\n", method, uri, &version) != 3) {
+        char *lineStr = calloc(lineSize + 1, 1);
+        memcpy(lineStr, line, lineSize);
+        int version1, version2;
+        if(sscanf(lineStr, "%s %s HTTP/%d.%d\r\n", method, uri, &version1, &version2) != 4) {
+            free(lineStr);
             setRequestError(req, BAD_REQUEST);
         } else {
+            free(lineStr);
             logger(LogDebug, "Parsed Status Line: Method = %s, URI = %s, Version = %d\n",
-                   method, uri, version);
+                   method, uri, version2);
             int numMethods = sizeof(methodTable) / sizeof(methodEntry);
             int i;
             for(i = 0; i < numMethods; i++) {
@@ -128,12 +132,12 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
             }
             if(req->method == UNIMPLEMENTED) {
                 setRequestError(req, NOT_IMPLEMENTED);
-            } else if(version != 1) {
+            } else if(version1 != 1 || version2 != 1  ) {
                 setRequestError(req, HTTP_VERSION_NOT_SUPPORTED);
             } else {
                 uri = realloc(uri, strlen(uri) + 1);
                 req->uri = uri;
-                req->version = version;
+                req->version = version2;
                 req->curState = headerLine;
             }
         }
@@ -184,6 +188,7 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
             req->curState = requestDone;
         }
         if(length - curLength <= lineSize) {
+            logger(LogDebug, "Stat content length=%d, curLength=%d, lineSize=%d \n", length, curLength, lineSize);
             size_t readSize = length - curLength;
             req->content = realloc(req->content, length + 1);
             req->content[length] = '\0';
@@ -191,12 +196,14 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
             req->contentLength = length;
             req->curState = requestDone;
             *parsedSize = readSize;
+            logger(LogDebug, "Got content %d done\n", readSize);
         } else {
             req->content = realloc(req->content, curLength + lineSize + 1);
             req->content[curLength+lineSize] = '\0';
             memcpy(req->content + curLength, line, lineSize);
             req->contentLength = curLength + lineSize;
             req->curState = content;
+            logger(LogDebug, "Got content %d in middle\n", lineSize);
         }
         break;
     }
