@@ -115,8 +115,10 @@ void createPool(DLL *list, fd_set *readPool, fd_set *writePool, int *maxSocket)
         FD_SET(connFd, readPool);
         max = connFd;
         /* Add client socket */
-        for(i = 1; i < list->size; i++) {
-            connPtr = getNodeDataAt(list, i);
+        ref=ref->next;
+        i=1;;
+        while(i<list->size){
+            connPtr = ref->data;
             connFd = getConnObjSocket(connPtr);
             logger(LogDebug, "[%d", connFd);
             if(!isFullConnObj(connPtr)) {
@@ -130,6 +132,8 @@ void createPool(DLL *list, fd_set *readPool, fd_set *writePool, int *maxSocket)
                 logger(LogDebug, "W");
             }
             logger(LogDebug, "]");
+            i++;
+            ref=ref->next;
         }
         logger(LogDebug, " Max = %d\n", max);
         *maxSocket = max;

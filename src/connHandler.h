@@ -11,7 +11,7 @@
 
 #include "connObj.h"
 
-#define BUF_SIZE 1024
+#define BUF_SIZE 8192 
 
 
 int newConnectionHandler(connObj *);
