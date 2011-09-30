@@ -33,6 +33,7 @@ fileMetadata *prepareFile(char *uri, char *mode)
     }
     logger(LogDebug, "FilePath:[%s]\n", path);
     if(stat(path, &fileStat) != 0) {
+        free(path);
         return NULL;
     }else{
         if(S_ISDIR(fileStat.st_mode)){
@@ -43,6 +44,7 @@ fileMetadata *prepareFile(char *uri, char *mode)
     
     fd = fopen(path, mode);
     if(fd == NULL) {
+        free(path);
         logger(LogDebug, "Failed open\n");
         return NULL;
     } else {

@@ -75,8 +75,9 @@ void buildResponseObj(responseObj *res, requestObj *req)
             insertNode(header, newHeaderEntry("content-type",
                                               getContentType(res->fileMeta)));
             //Last-modified
-            insertNode(header, newHeaderEntry("last-modified",
-                                              getHTTPDate(getLastMod(res->fileMeta))));
+            dateStr=getHTTPDate(getLastMod(res->fileMeta));
+            insertNode(header, newHeaderEntry("last-modified",dateStr));
+            free(dateStr);
         }
         break;
         default:
