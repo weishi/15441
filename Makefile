@@ -37,4 +37,3 @@ clean:
 	rm -f lisod
 	rm ./*.o
 
-re: clean lisod
