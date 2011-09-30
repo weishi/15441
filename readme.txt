@@ -1,4 +1,4 @@
-Echo server implementation
+HTTP/1.1 server implementation
 
 + Components
 
@@ -6,15 +6,22 @@ The server is devided into the following components:
 
 Select engine: handles the incoming connection at listening 
     socket and create socket for new connection.
-Http handler: read and write data from socket. This does not
-     parse http request yet, but only echo data.
+Http handler:
+    1) Http Parser: parse data from buffer and build up a request object
+    2) Http Responder: take request object and build up a response object
 Socket container: an abstraction model, which contains socket
      status and provides socket operation.
+Connection handler: provides an interface between high level parser and low level 
+    socket read/write
 Linked list: a linked list implementation, used to track
-     active sockets.
+     active socketsi, and header key/value pair.
+Common lib: supplement to c string lib
+FileIO lib: handle will file related operation, eg open, write, get metadata
+
 
 + Algorithm
 
+Select:
 Add listening socket into select's READ set;
 for each select() return, do
     if existing socket is ready to read, read data into buffer
@@ -25,5 +32,14 @@ for each select() return, do
     If existing socket's buffer is not empty, add it to WRITE set
     If existing socket has closed, remove it from list.
     
-    
- 
+Parser:
+If buffer is not empty, do
+    If parsing Headers
+        Look for next "\r\n"
+        Parse current pointer up to "\r\n"
+        Remove parsed line
+        Shift lines after that to make room for more requests
+    If parsing Contents
+        Take the whole buffer
+        Append correct length of data, depending on Content-length and length read so far
+

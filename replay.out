@@ -1,3 +1,39 @@
-test
-a long long long string aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-\0 more text
+HTTP/1.1 200 OK
+Connection: Keep-Alive
+Date: Fri, 30 Sep 2011 15:01:03 GMT
+Server: Liso/1.0
+Content-length: 802
+Content-type: text/html
+Last-modified: Wed, 28 Sep 2011 19:56:11 GMT
+
+<!DOCTYPE html> 
+<html xml:lang="en" lang="en" xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+        <title>Liso the Friendly Web Server</title>
+        <link rel="stylesheet" type="text/css" href="style.css" /> 
+    </head>
+
+    <body>
+        <div id="page">
+            <img src="images/liso_header.png" alt="Liso the Friendly Web Server"></img>
+            <p>Welcome to the Liso 1.0 web server.  If you see this page then
+               congratulations!  Your Liso web server is up and running now!</p>
+            <p>This Liso web server was implemented by: xxxxxxx
+               &#60;<a href="mailto:xxxxx@andrew.cmu.edu">xxxxx@andrew.cmu.edu
+                    </a>&#62;</p>
+        </div>
+    </body>
+
+</html>
+
+HTTP/1.1 501 NOT IMPLEMENTED
+Connection: close
+Date: Fri, 30 Sep 2011 14:55:27 GMT
+Server: Liso/1.0
+
+HTTP/1.1 505 HTTP VERSION NOT SUPPORTED
+Connection: close
+Date: Fri, 30 Sep 2011 14:55:41 GMT
+Server: Liso/1.0
+

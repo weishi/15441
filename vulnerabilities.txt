@@ -1,7 +1,8 @@
-1. Buffer is fixed size. If a client is sending a lot of data, but it 
-doesn't receive anything back to free up the buffer, the client would
-not be able to proceed.
-
+1. Header larger than buffer size will be rejected.
+ 
 2. Zombie client is not detected. If clients don't close connection,
 the server will keep them. This could cause the problem of running 
 out of file descriptor.
+
+3. Some corner case of LWS(linear white space) in request between keywords
+is not honored.

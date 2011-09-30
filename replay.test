@@ -1,3 +1,9 @@
-test
-a long long long string aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-\0 more text
+GET / HTTP/1.1\r\n
+host: localhost\r\n
+\r\n
+BADGET / HTTP/1.1\r\n
+host: localhost\r\n
+\r\n
+GET / HTTP/1.3\r\n
+host: localhost\r\n
+\r\n
