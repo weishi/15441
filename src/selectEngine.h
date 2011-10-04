@@ -10,17 +10,17 @@
 #include <unistd.h>
 
 #include "connHandler.h"
-
+#include "sslLib.h"
 
 typedef struct selectEngine {
     int portHTTP;
     int portHTTPS;
+    SSL_CTX *ctx;
     int  (*newConnHandler)(connObj *);
     void (*readConnHandler)(connObj *);
     void (*processConnHandler)(connObj *);
     void (*writeConnHandler)(connObj *);
     int (*closeConnHandler)(connObj *);
-
 } selectEngine;
 
 void initEngine(selectEngine *engine,
@@ -30,16 +30,19 @@ void initEngine(selectEngine *engine,
                 void (*readConnHandler)(connObj *),
                 void (*processConnHandler)(connObj *),
                 void (*writeConnHandler)(connObj *),
-                int (*closeConnHandler)(connObj *)
+                int (*closeConnHandler)(connObj *),
+                char *crtFile,
+                char *keyFile
                );
 
 int startEngine(selectEngine *);
-int listenSocket(selectEngine *, int listenFd);
+int listenSocket(selectEngine *, int, int);
 int openSocket(int);
 int closeSocket(int);
 
 void createPool(DLL *, fd_set *, fd_set *, int *);
 void handlePool(DLL *, fd_set *, fd_set *, selectEngine *);
+
 
 
 #endif

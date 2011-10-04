@@ -61,25 +61,38 @@ void processConnectionHandler(connObj *connPtr)
 
 void readConnectionHandler(connObj *connPtr)
 {
+    if(!hasAcceptedSSL(connPtr)){
+        SSL_accept(connPtr->connSSL);
+        setAcceptedSSL(connPtr);
+        return;
+    }
     if(!isFullConnObj(connPtr)) {
         char *buf;
         ssize_t size;
         int connFd = getConnObjSocket(connPtr);
-        ssize_t readret = 0;
+        ssize_t retSize = 0;
         getConnObjReadBufferForWrite(connPtr, &buf, &size);
-
-        readret = recv(connFd, buf, size, 0);
-        if (readret == -1) {
+        if(isHTTP(connPtr)) {
+            logger(LogDebug, "HTTP client...");
+            retSize = recv(connFd, buf, size, 0);
+        } else if(isHTTPS(connPtr)) {
+            logger(LogDebug, "HTTPS client...");
+            retSize = SSL_read(connPtr->connSSL, buf, size);
+        } else {
+            retSize = -1;
+        }
+        if (retSize == -1) {
             logger(LogProd, "Error reading from client.\n");
+            ERR_print_errors_fp(getLogger());
             setConnObjClose(connPtr);
             return;
-        } else if(readret == 0) {
+        } else if(retSize == 0) {
             logger(LogDebug, "Client Closed [%d]", connFd);
             setConnObjClose(connPtr);
             return;
         } else {
-            logger(LogDebug, "Read %d bytes\n", readret);
-            addConnObjReadSize(connPtr, readret);
+            logger(LogDebug, "Read %d bytes\n", retSize);
+            addConnObjReadSize(connPtr, retSize);
         }
 
     }
@@ -97,12 +110,18 @@ void writeConnectionHandler(connObj *connPtr)
     if(size <= 0) {
         return;
     }
-    retSize = send(connFd, buf, size, 0);
+    if(isHTTP(connPtr)) {
+        retSize = send(connFd, buf, size, 0);
+    } else if(isHTTPS(connPtr)) {
+        retSize = SSL_write(connPtr->connSSL, buf, size);
+    } else {
+        retSize = -1;
+    }
     if(retSize == -1 && errno == EINTR) {
         return ;
     }
     if (retSize != size) {
-        logger(LogProd, "WTFError sending to client.\n");
+        logger(LogProd, "Error sending to client.\n");
         setConnObjClose(connPtr);
     } else {
         if(connPtr->wbStatus == lastRes) {

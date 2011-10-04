@@ -14,8 +14,10 @@ int main(int argc, char *argv[])
     char *lockFile;
     char *wwwFolder;
     char *CGIFolder;
+    char *crtFile;
+    char *keyFile;
     selectEngine engine;
-    if(argc != 7) {
+    if(argc != 9) {
         printf(USAGE, argv[0]);
         return EXIT_FAILURE;
     }
@@ -26,6 +28,9 @@ int main(int argc, char *argv[])
     lockFile = argv[4];
     wwwFolder = argv[5];
     CGIFolder = argv[6];
+    crtFile= argv[7];
+    keyFile=argv[8];
+
 
     if(initLogger(logFile) == -1) {
         printf("Error opening logging file.\n");
@@ -35,13 +40,18 @@ int main(int argc, char *argv[])
         printf("Error opening server root.\n");
         return EXIT_FAILURE;
     }
-    logger(LogDebug, "HTTP = %d, HTTPS = %d\nlogFile = =%s\nlockFile = %s\nwww = %s\nCGI = %s\n",
+    logger(LogDebug, "HTTP = %d, HTTPS = %d\n"
+            "logFile = %s\nlockFile = %s\n"
+            "www = %s\nCGI = %s\n"
+            "crtFile = %s\nkeyFile = %s\n",
            portHTTP,
            portHTTPS,
            logFile,
            lockFile,
            wwwFolder,
-           CGIFolder);
+           CGIFolder,
+           crtFile,
+           keyFile);
     initEngine(&engine,
                portHTTP,
                portHTTPS,
@@ -49,7 +59,9 @@ int main(int argc, char *argv[])
                readConnectionHandler,
                processConnectionHandler,
                writeConnectionHandler,
-               closeConnectionHandler
+               closeConnectionHandler,
+               crtFile,
+               keyFile
               );
     return startEngine(&engine);
 }

@@ -168,13 +168,16 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
             logger(LogDebug, "KeyValue header\n");
             char *key = malloc(lineSize);
             char *value = malloc(lineSize);
-            if(sscanf(line, "%[a-zA-Z0-9-]:%[^\r\n]", key, value) != 2) {
+            char *strLine=calloc(lineSize+1,1);
+            memcpy(strLine, line, lineSize);
+            if(sscanf(strLine, "%[a-zA-Z0-9-]:%[^\r\n]", key, value) != 2) {
                 setRequestError(req, BAD_REQUEST);
             } else {
                 key = realloc(key, strlen(key) + 1);
                 value = realloc(value, strlen(value) + 1);
                 insertNode(req->header, newHeaderEntry(key, value));
             }
+            free(strLine);
             free(key);
             free(value);
         }

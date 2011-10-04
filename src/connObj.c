@@ -8,6 +8,10 @@ int compareConnObj(void *data1, void *data2)
 void freeConnObj(void *data)
 {
     connObj *connPtr = data;
+    if(isHTTPS(connPtr)) {
+        SSL_shutdown(connPtr->connSSL);
+        SSL_free(connPtr->connSSL);
+    }
     close(connPtr->connFd);
     free(connPtr->readBuffer);
     free(connPtr->writeBuffer);
@@ -28,6 +32,7 @@ connObj *createConnObj(int connFd, ssize_t bufferSize)
 {
     connObj *newObj = malloc(sizeof(connObj));
     newObj->connFd = connFd;
+    newObj->acceptedSSL = 0;
     newObj->curReadSize = 0;
     newObj->maxReadSize = bufferSize;
     newObj->curWriteSize = 0;
@@ -36,6 +41,7 @@ connObj *createConnObj(int connFd, ssize_t bufferSize)
     newObj->wbStatus = initRes;
     newObj->readBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
     newObj->writeBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
+
     newObj->req = createRequestObj();
     newObj->res = NULL;
     return newObj;
@@ -127,5 +133,35 @@ int isEmptyConnObj(connObj *connPtr)
     }
 }
 
+void setConnObjHTTP(connObj *connPtr)
+{
+    connPtr->connType = T_HTTP;
+    connPtr->connSSL = NULL;
+}
 
+void setConnObjHTTPS(connObj *connPtr, SSL_CTX *ctx)
+{
+    SSL *sslPtr = SSL_new(ctx);
+    SSL_set_fd(sslPtr, connPtr->connFd);
+    connPtr->connSSL = sslPtr;
+    connPtr->connType = T_HTTPS;
+}
 
+int isHTTP(connObj *connPtr)
+{
+    return connPtr->connType == T_HTTP;
+}
+
+int isHTTPS(connObj *connPtr)
+{
+    return connPtr->connType == T_HTTPS;
+}
+
+int hasAcceptedSSL(connObj *connPtr)
+{
+    return connPtr->acceptedSSL == 1;
+}
+
+void setAcceptedSSL(connObj *connPtr){
+    connPtr->acceptedSSL=1;
+}

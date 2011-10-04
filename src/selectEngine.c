@@ -7,7 +7,9 @@ void initEngine(selectEngine *engine,
                 void (*readConnHandler)(connObj *),
                 void (*processConnHandler)(connObj *),
                 void (*writeConnHandler)(connObj *),
-                int (*closeConnHandler)(connObj *) )
+                int (*closeConnHandler)(connObj *),
+                char *crtFile,
+                char *keyFile )
 {
 
     engine->portHTTP = portHTTP;
@@ -17,30 +19,29 @@ void initEngine(selectEngine *engine,
     engine->processConnHandler = processConnHandler;
     engine->writeConnHandler = writeConnHandler;
     engine->closeConnHandler = closeConnHandler;
+    engine->ctx = initSSL(crtFile, keyFile);
 }
 
 int startEngine(selectEngine *engine)
 {
-    int listenFd = openSocket(engine->portHTTP);
-    if(listenFd < 0) {
+    int httpFD = openSocket(engine->portHTTP);
+    int httpsFD = openSocket(engine->portHTTPS);
+    if(httpFD < 0 || httpsFD < 0) {
         return EXIT_FAILURE;
     }
-    return listenSocket(engine, listenFd);
+    return listenSocket(engine, httpFD, httpsFD);
 }
 
-int listenSocket(selectEngine *engine, int listenFd)
+int listenSocket(selectEngine *engine, int httpFD, int httpsFD)
 {
-    int maxSocket = listenFd;
+    int maxSocket = (httpFD > httpsFD) ? httpFD : httpsFD;
     int numReady;
     DLL socketList;
 
-    struct timeval timeout;
-    timeout.tv_sec = 1;
-    timeout.tv_usec = 0;
-
     fd_set readPool, writePool;
     initList(&socketList, compareConnObj, freeConnObj, mapConnObj);
-    insertNode(&socketList, createConnObj(listenFd, 0));
+    insertNode(&socketList, createConnObj(httpFD, 0));
+    insertNode(&socketList, createConnObj(httpsFD, 0));
     while(1) {
         logger(LogDebug, "Selecting...\n");
         createPool(&socketList, &readPool, &writePool, &maxSocket);
@@ -63,10 +64,11 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, selectEngine *en
         return;
     } else {
         int i = 0;
+        int listenFd;
         connObj *connPtr;
         /* Handle existing connections */
         logger(LogDebug, "HandlePool: Total Existing [%d]\n", numPool);
-        for(i = 1; i < numPool; i++) {
+        for(i = 2; i < numPool; i++) {
             connPtr = getNodeDataAt(list, i);
             int connFd = getConnObjSocket(connPtr);
             logger(LogDebug, "Existing [%d] ", connFd);
@@ -81,16 +83,32 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, selectEngine *en
             }
             logger(LogDebug, "\n");
         }
-        /* Accept potential new connection */
+        /* Accept potential new HTTP connection */
         connPtr = getNodeDataAt(list, 0);
-        int listenFd = getConnObjSocket(connPtr);
+        listenFd = getConnObjSocket(connPtr);
         if(FD_ISSET(listenFd, readPool)) {
             int status = engine->newConnHandler(connPtr);
             if(status > 0) {
-                logger(LogDebug, "New connection accpted\n");
-                insertNode(list, createConnObj(status, BUF_SIZE));
+                logger(LogDebug, "New HTTP connection accpted\n");
+                connPtr = createConnObj(status, BUF_SIZE);
+                setConnObjHTTP(connPtr);
+                insertNode(list, connPtr);
             } else {
-                logger(LogProd, "cannot accept new Conn\n");
+                logger(LogProd, "cannot accept new HTTP Connection\n");
+            }
+        }
+        /* Accept potential new HTTPS connection */
+        connPtr = getNodeDataAt(list, 1);
+        listenFd = getConnObjSocket(connPtr);
+        if(FD_ISSET(listenFd, readPool)) {
+            int status = engine->newConnHandler(connPtr);
+            if(status > 0) {
+                logger(LogDebug, "New HTTPS connection accpted\n");
+                connPtr = createConnObj(status, BUF_SIZE);
+                setConnObjHTTPS(connPtr, engine->ctx);
+                insertNode(list, connPtr);
+            } else {
+                logger(LogProd, "cannot accept new HTTPS Connection\n");
             }
         }
         /* Remove closed connections from list */
@@ -106,18 +124,24 @@ void createPool(DLL *list, fd_set *readPool, fd_set *writePool, int *maxSocket)
     if(ref == NULL) {
         return;
     } else {
-        int i;
+        int i, connFd;
+        connObj *connPtr;
         FD_ZERO(readPool);
         FD_ZERO(writePool);
-        /* Add listening socket */
-        connObj *connPtr = getNodeDataAt(list, 0);
-        int connFd = getConnObjSocket(connPtr);
+        /* Add HTTP listening socket */
+        connPtr = getNodeDataAt(list, 0);
+        connFd = getConnObjSocket(connPtr);
         FD_SET(connFd, readPool);
         max = connFd;
+        /* Add HTTPS listening socket */
+        connPtr = getNodeDataAt(list, 1);
+        connFd = getConnObjSocket(connPtr);
+        FD_SET(connFd, readPool);
+        max = (connFd > max ) ? connFd : max;
         /* Add client socket */
-        ref=ref->next;
-        i=1;;
-        while(i<list->size){
+        ref = ref->next;
+        i = 1;;
+        while(i < list->size) {
             connPtr = ref->data;
             connFd = getConnObjSocket(connPtr);
             logger(LogDebug, "[%d", connFd);
@@ -133,7 +157,7 @@ void createPool(DLL *list, fd_set *readPool, fd_set *writePool, int *maxSocket)
             }
             logger(LogDebug, "]");
             i++;
-            ref=ref->next;
+            ref = ref->next;
         }
         logger(LogDebug, " Max = %d\n", max);
         *maxSocket = max;

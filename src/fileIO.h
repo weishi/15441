@@ -57,6 +57,7 @@ time_t getLastMod(fileMetadata *fm);
 //Logging
 void logger(enum LogLevel, const char *format, ...);
 int initLogger(char *logFile);
+FILE* getLogger();
 
 /* Private methods */
 char *createPath(char *dir, char *path, char *fileName);

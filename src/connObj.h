@@ -7,7 +7,8 @@
 #include <unistd.h>
 #include <string.h>
 
-//#include "httpParser.h"
+
+#include "sslLib.h"
 #include "httpResponder.h"
 
 enum writeStatus {
@@ -17,8 +18,17 @@ enum writeStatus {
     doneRes,
 };
 
+enum HTTPType {
+    T_HTTP,
+    T_HTTPS,
+};
+
+
 typedef struct connObj {
     int connFd;
+    enum HTTPType connType;
+    SSL *connSSL;
+    int acceptedSSL;
     ssize_t curReadSize;
     ssize_t maxReadSize;
     ssize_t curWriteSize;
@@ -53,6 +63,14 @@ void removeConnObjReadSize(connObj *, ssize_t);
 void addConnObjWriteSize(connObj *, ssize_t);
 void removeConnObjWriteSize(connObj *, ssize_t);
 
+void setConnObjHTTP(connObj *);
+void setConnObjHTTPS(connObj *, SSL_CTX*);
+
+int isHTTP(connObj *);
+int isHTTPS(connObj *);
+
+int hasAcceptedSSL(connObj *);
+void setAcceptedSSL(connObj *);
 int isFullConnObj(connObj *);
 int isEmptyConnObj(connObj *);
 

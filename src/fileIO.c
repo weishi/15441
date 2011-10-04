@@ -127,6 +127,9 @@ void logger(enum LogLevel level, const char *format, ...)
 
 }
 
+FILE* getLogger(){
+    return logFD;
+}
 
 
 /* Private methods */
