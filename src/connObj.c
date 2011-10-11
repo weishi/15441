@@ -141,6 +141,11 @@ void setConnObjHTTP(connObj *connPtr)
 
 void setConnObjHTTPS(connObj *connPtr, SSL_CTX *ctx)
 {
+    /* Set non-blocking */
+    int flag = fcntl(connPtr->connFd, F_GETFL, 0);
+    flag = flag | O_NONBLOCK;
+    fcntl(connPtr->connFd, F_SETFL, flag);
+    /* Init SSL connection */
     SSL *sslPtr = SSL_new(ctx);
     SSL_set_fd(sslPtr, connPtr->connFd);
     connPtr->connSSL = sslPtr;
@@ -162,6 +167,7 @@ int hasAcceptedSSL(connObj *connPtr)
     return connPtr->acceptedSSL == 1;
 }
 
-void setAcceptedSSL(connObj *connPtr){
-    connPtr->acceptedSSL=1;
+void setAcceptedSSL(connObj *connPtr)
+{
+    connPtr->acceptedSSL = 1;
 }

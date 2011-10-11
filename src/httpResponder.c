@@ -34,7 +34,20 @@ void freeResponseObj(responseObj *res)
     }
 }
 
-void buildResponseObj(responseObj *res, requestObj *req)
+void buildResponseObj(responseObj *res, requestObj *req){
+    if(isCGIRequest(req)){
+        //handle CGI
+    }else{
+        buildHTTPResponseObj(res, req);
+    }
+}
+
+void buildCGIResponseObj(responseObj *res, requestObj *req){
+    res=res;
+    req=req;
+}
+
+void buildHTTPResponseObj(responseObj *res, requestObj *req)
 {
     int errorFlag = addStatusLine(res, req);
     DLL *header = res->header;

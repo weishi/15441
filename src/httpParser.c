@@ -217,6 +217,10 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
     }
 }
 
+int isCGIRequest(requestObj *req){
+    return req==NULL;
+}
+
 int isValidRequest(requestObj *req)
 {
     if(req->curState == requestError) {

@@ -30,6 +30,8 @@ responseObj *createResponseObj();
 void freeResponseObj(responseObj *);
 int writeResponse(responseObj *, char *, ssize_t , ssize_t *);
 void buildResponseObj(responseObj *, requestObj *);
+void buildHTTPResponseObj(responseObj *, requestObj *);
+void buildCGIResponseObj(responseObj *, requestObj *);
 int toClose(responseObj *);
 
 /* Private methods */

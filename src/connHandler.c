@@ -61,7 +61,7 @@ void processConnectionHandler(connObj *connPtr)
 
 void readConnectionHandler(connObj *connPtr)
 {
-    if(!hasAcceptedSSL(connPtr)){
+    if(!hasAcceptedSSL(connPtr)) {
         SSL_accept(connPtr->connSSL);
         setAcceptedSSL(connPtr);
         return;
@@ -78,12 +78,24 @@ void readConnectionHandler(connObj *connPtr)
         } else if(isHTTPS(connPtr)) {
             logger(LogDebug, "HTTPS client...");
             retSize = SSL_read(connPtr->connSSL, buf, size);
+
         } else {
             retSize = -1;
         }
         if (retSize == -1) {
             logger(LogProd, "Error reading from client.\n");
-            ERR_print_errors_fp(getLogger());
+            if(isHTTPS(connPtr)) {
+                int err = SSL_get_error(connPtr->connSSL, retSize);
+                switch(err) {
+                case SSL_ERROR_WANT_READ:
+                case SSL_ERROR_WANT_WRITE:
+                    logger(LogProd, "SSL WANT MORE.\n");
+                    return;
+                default:
+                    ERR_print_errors_fp(getLogger());
+                    break;
+                }
+            }
             setConnObjClose(connPtr);
             return;
         } else if(retSize == 0) {

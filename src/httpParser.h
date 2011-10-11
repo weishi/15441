@@ -59,12 +59,14 @@ typedef struct requestObj {
     int contentLength;
     int statusCode;
     enum State curState;
+    int isCGI;
 } requestObj;
 
 /* Public methods */
 requestObj *createRequestObj();
 void freeRequestObj(requestObj*);
 enum Status httpParse(requestObj *, char *, ssize_t *, int);
+int isCGIRequest(requestObj*);
 
 /* Private methods */
 void httpParseLine(requestObj *, char *, ssize_t , ssize_t *);

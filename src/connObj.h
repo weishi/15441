@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
-
+#include <fcntl.h>
 
 #include "sslLib.h"
 #include "httpResponder.h"
