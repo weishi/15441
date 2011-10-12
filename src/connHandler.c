@@ -1,6 +1,6 @@
 #include "connHandler.h"
 
-int newConnectionHandler(connObj *connPtr)
+int newConnectionHandler(connObj *connPtr, char **addr)
 {
     struct sockaddr_in clientAddr;
     socklen_t clientLength = sizeof(clientAddr);
@@ -10,6 +10,7 @@ int newConnectionHandler(connObj *connPtr)
         logger(LogProd, "Error accepting socket.\n");
         return -1;
     } else {
+        *addr=inet_ntoa(clientAddr.sin_addr);
         return newFd;
     }
 }
@@ -146,7 +147,9 @@ void writeConnectionHandler(connObj *connPtr)
                 freeResponseObj(connPtr->res);
                 connPtr->res = NULL;
                 freeRequestObj(connPtr->req);
-                connPtr->req = createRequestObj();
+                connPtr->req = createRequestObj(
+                        connPtr->serverPort,
+                        connPtr->clientAddr);
             }
         }
         logger(LogDebug, "Done\n");

@@ -1,7 +1,8 @@
 #include "httpParser.h"
 
-requestObj *createRequestObj()
+requestObj *createRequestObj(int port, char *addr)
 {
+    char buf[16];
     requestObj *newObj = malloc(sizeof(requestObj));
     newObj->method = UNIMPLEMENTED;
     newObj->uri = NULL;
@@ -12,6 +13,13 @@ requestObj *createRequestObj()
     newObj->contentLength = 0;
     newObj->statusCode = 0;
     newObj->curState = requestLine;
+
+    newObj->isCGI = -1;
+    newObj->envp = malloc(sizeof(DLL));
+    initList(newObj->envp, compareHeaderEntry, freeHeaderEntry, NULL);
+    insertENVP(newObj, "REMOTE_ADDR", addr);
+    snprintf(buf, 16, "%d", port);
+    insertENVP(newObj, "SERVER_PORT", buf);
     return newObj;
 }
 void freeRequestObj(requestObj *req)
@@ -24,6 +32,8 @@ void freeRequestObj(requestObj *req)
         logger(LogDebug, "-content");
         freeList(req->header);
         logger(LogDebug, "-header");
+        freeList(req->envp);
+        logger(LogDebug, "-envp");
         free(req);
         logger(LogDebug, "-Done\n");
     }
@@ -168,7 +178,7 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
             logger(LogDebug, "KeyValue header\n");
             char *key = malloc(lineSize);
             char *value = malloc(lineSize);
-            char *strLine=calloc(lineSize+1,1);
+            char *strLine = calloc(lineSize + 1, 1);
             memcpy(strLine, line, lineSize);
             if(sscanf(strLine, "%[a-zA-Z0-9-]:%[^\r\n]", key, value) != 2) {
                 setRequestError(req, BAD_REQUEST);
@@ -217,8 +227,101 @@ void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parse
     }
 }
 
-int isCGIRequest(requestObj *req){
-    return req==NULL;
+int isCGIRequest(requestObj *req)
+{
+    if(req->isCGI != -1) {
+        return req->isCGI;
+    }
+    if(req->curState == requestError) {
+        req->isCGI = 0;
+    } else {
+        char *uri = req->uri;
+        char *CGIprefix = "/cgi/";
+        if(strncmp(uri, CGIprefix, strlen(CGIprefix)) != 0) {
+            req->isCGI = 0;
+        } else {
+            req->isCGI = 1;
+            buildENVP(req);
+        }
+    }
+    return req->isCGI;
+}
+
+
+void buildENVP(requestObj *req)
+{
+    char *value;
+    /* Parse URI */
+    char *uri=req->uri;
+    char *sep = strchr(uri, '?');
+    char *pathInfo = uri + strlen("/cgi");
+    char *queryString = NULL;
+    if(sep != NULL) {
+        *sep = '\0';
+        queryString = sep + 1;
+    }
+    req->exePath=pathInfo;
+    insertENVP(req, "QUERY_STRING", queryString);
+    insertENVP(req, "PATH_INFO", pathInfo);
+    insertENVP(req, "REQUEST_URI", req->uri);
+    
+    insertENVP(req, "GATEWAY_INTERFACE", "CGI/1.1");
+    insertENVP(req, "SERVER_PROTOCOL", "HTTP/1.1");
+    insertENVP(req, "SERVER_SOFTWARE", "Liso/1.0");
+    insertENVP(req, "SCRIPT_NAME", "/cgi");
+
+    value = getMethodString(req->method);
+    insertENVP(req, "REQUEST_METHOD", value);
+
+    value = getValueByKey(req->header, "content-length");
+    insertENVP(req, "CONTENT_LENGTH", value);
+    value = getValueByKey(req->header, "content-type");
+    insertENVP(req, "CONTENT_TYPE", value);
+    value = getValueByKey(req->header, "accept");
+    insertENVP(req, "HTTP_ACCEPT", value);
+    value = getValueByKey(req->header, "referer");
+    insertENVP(req, "HTTP_REFERER", value);
+    value = getValueByKey(req->header, "accept-encoding");
+    insertENVP(req, "HTTP_ACCEPT_ENCODING", value);
+    value = getValueByKey(req->header, "accept-language");
+    insertENVP(req, "HTTP_ACCEPT_LANGUAGE", value);
+    value = getValueByKey(req->header, "accept-charset");
+    insertENVP(req, "HTTP_ACCEPT_CHARSET", value);
+    value = getValueByKey(req->header, "host");
+    insertENVP(req, "HTTP_HOST", value);
+    value = getValueByKey(req->header, "cookie");
+    insertENVP(req, "HTTP_COOKIE", value);
+    value = getValueByKey(req->header, "user-agent");
+    insertENVP(req, "HTTP_USER_AGENT", value);
+    value = getValueByKey(req->header, "connection");
+    insertENVP(req, "HTTP_CONNECTION", value);
+
+}
+
+void insertENVP(requestObj *req, char *key, char *value)
+{
+    if(value == NULL) {
+        insertNode(req->envp, newHeaderEntry(key, ""));
+    } else {
+        insertNode(req->envp, newHeaderEntry(key, value));
+    }
+}
+
+char *getMethodString(enum Method method)
+{
+    char *value;
+    switch(method) {
+    case GET:
+        value = "GET";
+    case HEAD:
+        value = "HEAD";
+    case POST:
+        value = "POST";
+    default:
+        value = "";
+    }
+    return value;
+
 }
 
 int isValidRequest(requestObj *req)

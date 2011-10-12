@@ -26,6 +26,8 @@ enum HTTPType {
 
 typedef struct connObj {
     int connFd;
+    int serverPort;
+    char *clientAddr;
     enum HTTPType connType;
     SSL *connSSL;
     int acceptedSSL;
@@ -48,7 +50,7 @@ void freeConnObj(void *data);
 int mapConnObj(void *data);
 
 /* Constructor */
-connObj *createConnObj();
+connObj *createConnObj(int, ssize_t, int, char *);
 
 /* Getters and Setters */
 int getConnObjSocket(connObj *);
@@ -64,7 +66,7 @@ void addConnObjWriteSize(connObj *, ssize_t);
 void removeConnObjWriteSize(connObj *, ssize_t);
 
 void setConnObjHTTP(connObj *);
-void setConnObjHTTPS(connObj *, SSL_CTX*);
+void setConnObjHTTPS(connObj *, SSL_CTX *);
 
 int isHTTP(connObj *);
 int isHTTPS(connObj *);

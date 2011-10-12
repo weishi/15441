@@ -3,7 +3,7 @@
 void initEngine(selectEngine *engine,
                 int portHTTP,
                 int portHTTPS,
-                int (*newConnHandler)(connObj *),
+                int (*newConnHandler)(connObj *, char**),
                 void (*readConnHandler)(connObj *),
                 void (*processConnHandler)(connObj *),
                 void (*writeConnHandler)(connObj *),
@@ -40,8 +40,8 @@ int listenSocket(selectEngine *engine, int httpFD, int httpsFD)
 
     fd_set readPool, writePool;
     initList(&socketList, compareConnObj, freeConnObj, mapConnObj);
-    insertNode(&socketList, createConnObj(httpFD, 0));
-    insertNode(&socketList, createConnObj(httpsFD, 0));
+    insertNode(&socketList, createConnObj(httpFD, 0, 0, NULL));
+    insertNode(&socketList, createConnObj(httpsFD, 0, 0, NULL));
     while(1) {
         logger(LogDebug, "Selecting...\n");
         createPool(&socketList, &readPool, &writePool, &maxSocket);
@@ -87,10 +87,11 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, selectEngine *en
         connPtr = getNodeDataAt(list, 0);
         listenFd = getConnObjSocket(connPtr);
         if(FD_ISSET(listenFd, readPool)) {
-            int status = engine->newConnHandler(connPtr);
+            char *addr;
+            int status = engine->newConnHandler(connPtr, &addr);
             if(status > 0) {
                 logger(LogDebug, "New HTTP connection accpted\n");
-                connPtr = createConnObj(status, BUF_SIZE);
+                connPtr = createConnObj(status, BUF_SIZE, engine->portHTTP, addr);
                 setConnObjHTTP(connPtr);
                 insertNode(list, connPtr);
             } else {
@@ -101,10 +102,11 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, selectEngine *en
         connPtr = getNodeDataAt(list, 1);
         listenFd = getConnObjSocket(connPtr);
         if(FD_ISSET(listenFd, readPool)) {
-            int status = engine->newConnHandler(connPtr);
+            char *addr;
+            int status = engine->newConnHandler(connPtr, &addr);
             if(status > 0) {
                 logger(LogDebug, "New HTTPS connection accpted\n");
-                connPtr = createConnObj(status, BUF_SIZE);
+                connPtr = createConnObj(status, BUF_SIZE, engine->portHTTPS, addr);
                 setConnObjHTTPS(connPtr, engine->ctx);
                 insertNode(list, connPtr);
             } else {

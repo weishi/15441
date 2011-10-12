@@ -60,10 +60,12 @@ typedef struct requestObj {
     int statusCode;
     enum State curState;
     int isCGI;
+    char *exePath;
+    DLL *envp;
 } requestObj;
 
 /* Public methods */
-requestObj *createRequestObj();
+requestObj *createRequestObj(int,char *);
 void freeRequestObj(requestObj*);
 enum Status httpParse(requestObj *, char *, ssize_t *, int);
 int isCGIRequest(requestObj*);
@@ -74,4 +76,7 @@ void setRequestError(requestObj *, enum StatusCode );
 int isValidRequest(requestObj *);
 char* nextToken(char *, char *);
 void printRequest(const requestObj *);
+void buildENVP(requestObj *);
+void insertENVP(requestObj *, char*, char*);
+char *getMethodString(enum Method);
 #endif

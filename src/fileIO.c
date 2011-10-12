@@ -69,6 +69,10 @@ char *loadFile(fileMetadata *fm)
     return buffer;
 }
 
+char *getCGIPath(){
+    return _CGIFolder;
+}
+
 char *getFilePath(fileMetadata *fm)
 {
     return fm->path;

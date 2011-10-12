@@ -13,6 +13,7 @@ void freeConnObj(void *data)
         SSL_free(connPtr->connSSL);
     }
     close(connPtr->connFd);
+    free(connPtr->clientAddr);
     free(connPtr->readBuffer);
     free(connPtr->writeBuffer);
     freeRequestObj(connPtr->req);
@@ -28,10 +29,14 @@ int mapConnObj(void *data)
 }
 
 
-connObj *createConnObj(int connFd, ssize_t bufferSize)
+connObj *createConnObj(int connFd, ssize_t bufferSize, int port, char *addr)
 {
     connObj *newObj = malloc(sizeof(connObj));
     newObj->connFd = connFd;
+    newObj->serverPort = port;
+    char *buf = malloc(strlen(addr) + 1);
+    strcpy(buf, addr);
+    newObj->clientAddr = buf;
     newObj->acceptedSSL = 0;
     newObj->curReadSize = 0;
     newObj->maxReadSize = bufferSize;
@@ -42,7 +47,7 @@ connObj *createConnObj(int connFd, ssize_t bufferSize)
     newObj->readBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
     newObj->writeBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
 
-    newObj->req = createRequestObj();
+    newObj->req = createRequestObj(newObj->serverPort, newObj->clientAddr);
     newObj->res = NULL;
     return newObj;
 }

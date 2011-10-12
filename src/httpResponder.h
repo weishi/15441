@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <errno.h>
 #include <time.h>
 
@@ -31,11 +32,12 @@ void freeResponseObj(responseObj *);
 int writeResponse(responseObj *, char *, ssize_t , ssize_t *);
 void buildResponseObj(responseObj *, requestObj *);
 void buildHTTPResponseObj(responseObj *, requestObj *);
-void buildCGIResponseObj(responseObj *, requestObj *);
+int buildCGIResponseObj(responseObj *, requestObj *);
 int toClose(responseObj *);
 
 /* Private methods */
 void fillHeader(responseObj *);
+char **fillENVP(requestObj *);
 char *getHTTPDate(time_t);
 int addStatusLine(responseObj *res, requestObj *req);
 void printResponse(responseObj *);

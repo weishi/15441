@@ -54,6 +54,7 @@ char* getFilePath(fileMetadata *fm);
 char* getContentLength(fileMetadata *fm);
 time_t getLastMod(fileMetadata *fm);
 
+char *getCGIPath();
 //Logging
 void logger(enum LogLevel, const char *format, ...);
 int initLogger(char *logFile);

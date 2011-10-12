@@ -34,17 +34,91 @@ void freeResponseObj(responseObj *res)
     }
 }
 
-void buildResponseObj(responseObj *res, requestObj *req){
-    if(isCGIRequest(req)){
-        //handle CGI
-    }else{
-        buildHTTPResponseObj(res, req);
+void buildResponseObj(responseObj *res, requestObj *req)
+{
+    if(isCGIRequest(req)) {
+        int status = buildCGIResponseObj(res, req);
+        if(status == -1) {
+            setRequestError(req, INTERNAL_SERVER_ERROR);
+        } else {
+            return;
+        }
     }
+    buildHTTPResponseObj(res, req);
 }
 
-void buildCGIResponseObj(responseObj *res, requestObj *req){
-    res=res;
-    req=req;
+char **fillENVP(requestObj *req)
+{
+    DLL *envpList = req->envp;
+    int size = envpList->size;
+    int i = 0;
+    char **ret = malloc(size * sizeof(char *));
+    char *line;
+    for(i = 0; i < size; i++) {
+        headerEntry *hd = (headerEntry *)getNodeDataAt(envpList, i);
+        line = malloc(strlen(hd->key) + strlen("=") + strlen(hd->value) + 1);
+        strcpy(line, hd->key);
+        strcat(line, "=");
+        strcat(line, hd->value);
+        ret[i] = line;
+    }
+    return ret;
+}
+
+int buildCGIResponseObj(responseObj *res, requestObj *req)
+{
+    pid_t pid;
+    int stdin_pipe[2];
+    int stdout_pipe[2];
+    if(pipe(stdin_pipe) < 0 ) {
+        logger(LogProd, "Error piping for stdin.\n");
+        return -1;
+    }
+    if(pipe(stdout_pipe) < 0 ) {
+        logger(LogProd, "Error piping for stdout.\n");
+        return -1;
+    }
+    pid = fork();
+    /* not good */
+    if (pid < 0) {
+        logger(LogProd, "Error forking.\n");
+        return -1;
+    }
+    /* child, setup environment, execve */
+    if (pid == 0) {
+        char *CGIPath = getCGIPath();
+        char *fileCGI = malloc(strlen(CGIPath) + strlen(req->exePath) + 1);
+        strcpy(fileCGI, CGIPath);
+        strcat(fileCGI, req->exePath);
+        char *argvCGI[] = {fileCGI, NULL};
+        char **envpCGI = fillENVP(req);
+        close(stdout_pipe[0]);
+        close(stdin_pipe[1]);
+        dup2(stdout_pipe[1], fileno(stdout));
+        dup2(stdin_pipe[0], fileno(stdin));
+
+        logger(LogDebug, "To execve [%s]\n", fileCGI);
+        if (execve(fileCGI, argvCGI, envpCGI)) {
+            logger(LogProd, "Error execve [%s]\n", fileCGI);
+            return -1;
+        }
+    }
+    if (pid > 0) {
+        logger(LogProd, "Parent: Heading to select() loop.\n");
+        close(stdout_pipe[1]);
+        close(stdin_pipe[0]);
+
+        if (write(stdin_pipe[1], req->content, strlen(req->content)) < 0) {
+            logger(LogProd, "Parent: Error writing to child.\n");
+            return -1;
+        }
+
+        close(stdin_pipe[1]);
+        res=res;
+        //read(stdout_pipe[0]
+    }
+    return 1;
+
 }
 
 void buildHTTPResponseObj(responseObj *res, requestObj *req)
@@ -79,7 +153,7 @@ void buildHTTPResponseObj(responseObj *res, requestObj *req)
             if(valPtr != NULL && strcmp(valPtr, "close") == 0) {
                 insertNode(header, newHeaderEntry("connection", "close"));
                 res->close = 1;
-            }else{
+            } else {
                 insertNode(header, newHeaderEntry("connection", "Keep-Alive"));
             }
             //Content-length
@@ -90,8 +164,8 @@ void buildHTTPResponseObj(responseObj *res, requestObj *req)
             insertNode(header, newHeaderEntry("content-type",
                                               getContentType(res->fileMeta)));
             //Last-modified
-            dateStr=getHTTPDate(getLastMod(res->fileMeta));
-            insertNode(header, newHeaderEntry("last-modified",dateStr));
+            dateStr = getHTTPDate(getLastMod(res->fileMeta));
+            insertNode(header, newHeaderEntry("last-modified", dateStr));
             free(dateStr);
         }
         break;

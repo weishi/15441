@@ -16,7 +16,7 @@ typedef struct selectEngine {
     int portHTTP;
     int portHTTPS;
     SSL_CTX *ctx;
-    int  (*newConnHandler)(connObj *);
+    int  (*newConnHandler)(connObj *, char **);
     void (*readConnHandler)(connObj *);
     void (*processConnHandler)(connObj *);
     void (*writeConnHandler)(connObj *);
@@ -26,7 +26,7 @@ typedef struct selectEngine {
 void initEngine(selectEngine *engine,
                 int portHTTP,
                 int portHTTPS,
-                int (*newConnHandler)(connObj *),
+                int (*newConnHandler)(connObj *, char **),
                 void (*readConnHandler)(connObj *),
                 void (*processConnHandler)(connObj *),
                 void (*writeConnHandler)(connObj *),

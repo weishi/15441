@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -15,7 +16,7 @@
 #define BUF_SIZE 8192 
 
 
-int newConnectionHandler(connObj *);
+int newConnectionHandler(connObj *, char **);
 void readConnectionHandler(connObj *);
 void processConnectionHandler(connObj *);
 void writeConnectionHandler(connObj *);
