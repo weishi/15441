@@ -41,6 +41,7 @@ typedef struct connObj {
     char *writeBuffer;
     requestObj *req;
     responseObj *res;
+    int CGIout;
 } connObj;
 
 
@@ -76,6 +77,6 @@ void setAcceptedSSL(connObj *);
 int isFullConnObj(connObj *);
 int isEmptyConnObj(connObj *);
 
-
+void cleanConnObjCGI(connObj *);
 
 #endif

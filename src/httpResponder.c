@@ -3,6 +3,7 @@
 responseObj *createResponseObj()
 {
     responseObj *newObj = malloc(sizeof(responseObj));
+    newObj->isCGI = 0;
     newObj->header = malloc(sizeof(DLL));
     initList(newObj->header, compareHeaderEntry, freeHeaderEntry, NULL);
     newObj->statusLine = NULL;
@@ -14,6 +15,8 @@ responseObj *createResponseObj()
     newObj->maxHeaderPtr = 0;
     newObj->maxFilePtr = 0;
     newObj->close = 0;
+    newObj->CGIout = -1;
+    newObj->pid = 0;
     return newObj;
 }
 
@@ -29,6 +32,14 @@ void freeResponseObj(responseObj *res)
         logger(LogDebug, "-Headerbuf");
         free(res->fileBuffer);
         logger(LogDebug, "-Filebuf");
+        if(res->pid != 0) {
+            int status;
+            if(-1 == waitpid(res->pid, &status, 0)) {
+                logger(LogProd, "Error reaping child\n");
+            } else {
+                logger(LogDebug, "-PID");
+            }
+        }
         free(res);
         logger(LogDebug, "-Done\n");
     }
@@ -52,7 +63,7 @@ char **fillENVP(requestObj *req)
     DLL *envpList = req->envp;
     int size = envpList->size;
     int i = 0;
-    char **ret = malloc(size * sizeof(char *));
+    char **ret = malloc((size + 1) * sizeof(char *));
     char *line;
     for(i = 0; i < size; i++) {
         headerEntry *hd = (headerEntry *)getNodeDataAt(envpList, i);
@@ -62,6 +73,7 @@ char **fillENVP(requestObj *req)
         strcat(line, hd->value);
         ret[i] = line;
     }
+    ret[i] = NULL;
     return ret;
 }
 
@@ -86,20 +98,17 @@ int buildCGIResponseObj(responseObj *res, requestObj *req)
     }
     /* child, setup environment, execve */
     if (pid == 0) {
-        char *CGIPath = getCGIPath();
-        char *fileCGI = malloc(strlen(CGIPath) + strlen(req->exePath) + 1);
-        strcpy(fileCGI, CGIPath);
-        strcat(fileCGI, req->exePath);
-        char *argvCGI[] = {fileCGI, NULL};
+        char *pathCGI = getCGIPath();
+        char *argvCGI[] = {pathCGI, NULL};
         char **envpCGI = fillENVP(req);
         close(stdout_pipe[0]);
         close(stdin_pipe[1]);
         dup2(stdout_pipe[1], fileno(stdout));
         dup2(stdin_pipe[0], fileno(stdin));
 
-        logger(LogDebug, "To execve [%s]\n", fileCGI);
-        if (execve(fileCGI, argvCGI, envpCGI)) {
-            logger(LogProd, "Error execve [%s]\n", fileCGI);
+        logger(LogDebug, "To execve [%s]\n", pathCGI);
+        if (execve(pathCGI, argvCGI, envpCGI)) {
+            logger(LogProd, "Error execve [%s]\n", pathCGI);
             return -1;
         }
     }
@@ -107,18 +116,24 @@ int buildCGIResponseObj(responseObj *res, requestObj *req)
         logger(LogProd, "Parent: Heading to select() loop.\n");
         close(stdout_pipe[1]);
         close(stdin_pipe[0]);
-
-        if (write(stdin_pipe[1], req->content, strlen(req->content)) < 0) {
-            logger(LogProd, "Parent: Error writing to child.\n");
-            return -1;
+        if(req->contentLength > 0) {
+            if (write(stdin_pipe[1],
+                      req->content,
+                      req->contentLength) < 0) {
+                logger(LogProd, "Parent: Error writing to child.\n");
+                close(stdin_pipe[1]);
+                return -1;
+            }
         }
-
         close(stdin_pipe[1]);
-        res=res;
-        //read(stdout_pipe[0]
-    }
-    return 1;
 
+        res->isCGI = 1;
+        res->pid = pid;
+        res->CGIout = stdout_pipe[0];
+        return 1;
+    }
+    logger(LogProd, "Ooops! Unreachable code reached!\n");
+    return 0;
 }
 
 void buildHTTPResponseObj(responseObj *res, requestObj *req)
@@ -316,5 +331,8 @@ int addStatusLine(responseObj *res, requestObj *req)
     return errorFlag;
 }
 
-
+int isCGIResponse(responseObj *res)
+{
+    return res->isCGI == 1;
+}
 

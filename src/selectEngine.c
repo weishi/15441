@@ -5,6 +5,7 @@ void initEngine(selectEngine *engine,
                 int portHTTPS,
                 int (*newConnHandler)(connObj *, char**),
                 void (*readConnHandler)(connObj *),
+                void (*pipeConnHandler)(connObj *),
                 void (*processConnHandler)(connObj *),
                 void (*writeConnHandler)(connObj *),
                 int (*closeConnHandler)(connObj *),
@@ -16,6 +17,7 @@ void initEngine(selectEngine *engine,
     engine->portHTTPS = portHTTPS;
     engine->newConnHandler = newConnHandler;
     engine->readConnHandler = readConnHandler;
+    engine->pipeConnHandler = pipeConnHandler;
     engine->processConnHandler = processConnHandler;
     engine->writeConnHandler = writeConnHandler;
     engine->closeConnHandler = closeConnHandler;
@@ -77,6 +79,10 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, selectEngine *en
                 engine->readConnHandler(connPtr);
             }
             engine->processConnHandler(connPtr);
+            if(connPtr->CGIout!=-1 && FD_ISSET(connPtr->CGIout, readPool)) {
+                logger(LogDebug, "Active CR [%d] ", connPtr->CGIout);
+                engine->pipeConnHandler(connPtr);
+            }
             if(FD_ISSET(connFd, writePool)) {
                 logger(LogDebug, "Active WR [%d] ", connFd);
                 engine->writeConnHandler(connPtr);
@@ -156,6 +162,11 @@ void createPool(DLL *list, fd_set *readPool, fd_set *writePool, int *maxSocket)
                 FD_SET(connFd, writePool);
                 max = (connFd > max) ? connFd : max;
                 logger(LogDebug, "W");
+            }
+            if(connPtr->CGIout!=-1){
+                FD_SET(connPtr->CGIout, readPool);
+                max = (connPtr->CGIout > max) ? connPtr->CGIout : max;
+                logger(LogDebug, "C");
             }
             logger(LogDebug, "]");
             i++;

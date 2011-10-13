@@ -7,11 +7,14 @@
 #include <unistd.h>
 #include <errno.h>
 #include <time.h>
+#include <wait.h>
 
 #include "httpParser.h"
 #include "fileIO.h"
 
 typedef struct responseObj {
+    int isCGI;
+    /* HTTP Response */
     char *statusLine;
     DLL *header;
     fileMetadata *fileMeta;
@@ -22,6 +25,9 @@ typedef struct responseObj {
     size_t filePtr;
     size_t maxHeaderPtr;
     size_t maxFilePtr;
+    /* CGI Response */
+    int CGIout;
+    pid_t pid;
 
     int close;
 } responseObj;
@@ -34,7 +40,7 @@ void buildResponseObj(responseObj *, requestObj *);
 void buildHTTPResponseObj(responseObj *, requestObj *);
 int buildCGIResponseObj(responseObj *, requestObj *);
 int toClose(responseObj *);
-
+int isCGIResponse(responseObj *);
 /* Private methods */
 void fillHeader(responseObj *);
 char **fillENVP(requestObj *);

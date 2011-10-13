@@ -10,7 +10,7 @@ int newConnectionHandler(connObj *connPtr, char **addr)
         logger(LogProd, "Error accepting socket.\n");
         return -1;
     } else {
-        *addr=inet_ntoa(clientAddr.sin_addr);
+        *addr = inet_ntoa(clientAddr.sin_addr);
         return newFd;
     }
 }
@@ -37,18 +37,23 @@ void processConnectionHandler(connObj *connPtr)
             logger(LogDebug, "Create new response\n");
             connPtr->res = createResponseObj();
             buildResponseObj(connPtr->res, connPtr->req);
+            if(isCGIResponse(connPtr->res)) {
+                connPtr->CGIout = connPtr->res->CGIout;
+            }
         }
-        /* Dump response to buffer */
-        logger(LogDebug, "Dump response to buffer\n");
-        getConnObjWriteBufferForWrite(connPtr, &buf, &size);
-        logger(LogDebug, "Write buffer has %d bytes free\n", size);
-        done = writeResponse(connPtr->res, buf, size, &retSize);
-        logger(LogDebug, "%d bytes dumped, done? %d\n", retSize, done);
-        addConnObjWriteSize(connPtr, retSize);
-        connPtr->wbStatus = writingRes;
-        if(done) {
-            logger(LogDebug, "All dumped\n");
-            connPtr->wbStatus = lastRes;
+        if(!isCGIResponse(connPtr->res)) {
+            /* Dump HTTP response to buffer */
+            logger(LogDebug, "Dump response to buffer\n");
+            getConnObjWriteBufferForWrite(connPtr, &buf, &size);
+            logger(LogDebug, "Write buffer has %d bytes free\n", size);
+            done = writeResponse(connPtr->res, buf, size, &retSize);
+            logger(LogDebug, "%d bytes dumped, done? %d\n", retSize, done);
+            addConnObjWriteSize(connPtr, retSize);
+            connPtr->wbStatus = writingRes;
+            if(done) {
+                logger(LogDebug, "All dumped\n");
+                connPtr->wbStatus = lastRes;
+            }
         }
         logger(LogDebug, "Return from httpParse\n");
         break;
@@ -59,10 +64,29 @@ void processConnectionHandler(connObj *connPtr)
 }
 
 
+void pipeConnectionHandler(connObj *connPtr)
+{
+    char *buf;
+    ssize_t size;
+    getConnObjWriteBufferForWrite(connPtr, &buf, &size);
+    if(size > 0) {
+        ssize_t retSize = read(connPtr->CGIout, buf, size);
+        if(retSize > 0) {
+            addConnObjWriteSize(connPtr, retSize);
+        } else if(retSize == 0) {
+            cleanConnObjCGI(connPtr);
+        } else {
+            if(errno != EINTR) {
+                cleanConnObjCGI(connPtr);
+                setConnObjClose(connPtr);
+            }
+        }
+    }
+}
 
 void readConnectionHandler(connObj *connPtr)
 {
-    if(!hasAcceptedSSL(connPtr)) {
+    if(isHTTPS(connPtr) && !hasAcceptedSSL(connPtr)) {
         SSL_accept(connPtr->connSSL);
         setAcceptedSSL(connPtr);
         return;
@@ -79,7 +103,6 @@ void readConnectionHandler(connObj *connPtr)
         } else if(isHTTPS(connPtr)) {
             logger(LogDebug, "HTTPS client...");
             retSize = SSL_read(connPtr->connSSL, buf, size);
-
         } else {
             retSize = -1;
         }
@@ -95,6 +118,11 @@ void readConnectionHandler(connObj *connPtr)
                 default:
                     ERR_print_errors_fp(getLogger());
                     break;
+                }
+            } else {
+                if(errno == EINTR) {
+                    logger(LogProd, "RECV EINTR. Try later again.\n");
+                    return;
                 }
             }
             setConnObjClose(connPtr);
@@ -121,6 +149,7 @@ void writeConnectionHandler(connObj *connPtr)
     getConnObjWriteBufferForRead(connPtr, &buf, &size);
     logger(LogDebug, "Ready to write %d bytes...", size);
     if(size <= 0) {
+        prepareNewConn(connPtr);
         return;
     }
     if(isHTTP(connPtr)) {
@@ -137,27 +166,31 @@ void writeConnectionHandler(connObj *connPtr)
         logger(LogProd, "Error sending to client.\n");
         setConnObjClose(connPtr);
     } else {
-        if(connPtr->wbStatus == lastRes) {
-            connPtr->wbStatus = doneRes;
-            if(1 == toClose(connPtr->res)) {
-                logger(LogDebug, "[%d] set to close.\n", connPtr->connFd);
-                setConnObjClose(connPtr);
-            } else {
-                /* Prepare for next request */
-                freeResponseObj(connPtr->res);
-                connPtr->res = NULL;
-                freeRequestObj(connPtr->req);
-                connPtr->req = createRequestObj(
-                        connPtr->serverPort,
-                        connPtr->clientAddr);
-            }
-        }
+        prepareNewConn(connPtr);
         logger(LogDebug, "Done\n");
         removeConnObjWriteSize(connPtr, size);
     }
 
 }
 
+void prepareNewConn(connObj *connPtr)
+{
+    if(connPtr->wbStatus == lastRes) {
+        connPtr->wbStatus = doneRes;
+        if(1 == toClose(connPtr->res)) {
+            logger(LogDebug, "[%d] set to close.\n", connPtr->connFd);
+            setConnObjClose(connPtr);
+        } else {
+            /* Prepare for next request */
+            freeResponseObj(connPtr->res);
+            connPtr->res = NULL;
+            freeRequestObj(connPtr->req);
+            connPtr->req = createRequestObj(
+                               connPtr->serverPort,
+                               connPtr->clientAddr);
+        }
+    }
+}
 
 int closeConnectionHandler(connObj *connPtr)
 {

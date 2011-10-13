@@ -11,7 +11,7 @@
 
 #include "selectEngine.h"
 
-#define USAGE "\nUsage: %s <HTTP port> <HTTPS port> <logFile> <lockFile> <wwwFolder> <CGIFolder>\n"
+#define USAGE "\nUsage: %s <HTTP port> <HTTPS port> <logFile> <lockFile> <wwwFolder> <CGIScript> <key> <cert>\n"
 
 
 #endif

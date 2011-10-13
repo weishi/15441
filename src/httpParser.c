@@ -301,9 +301,9 @@ void buildENVP(requestObj *req)
 void insertENVP(requestObj *req, char *key, char *value)
 {
     if(value == NULL) {
-        insertNode(req->envp, newHeaderEntry(key, ""));
+        insertNode(req->envp, newENVPEntry(key, ""));
     } else {
-        insertNode(req->envp, newHeaderEntry(key, value));
+        insertNode(req->envp, newENVPEntry(key, value));
     }
 }
 

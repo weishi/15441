@@ -34,9 +34,12 @@ connObj *createConnObj(int connFd, ssize_t bufferSize, int port, char *addr)
     connObj *newObj = malloc(sizeof(connObj));
     newObj->connFd = connFd;
     newObj->serverPort = port;
-    char *buf = malloc(strlen(addr) + 1);
-    strcpy(buf, addr);
-    newObj->clientAddr = buf;
+    newObj->clientAddr = NULL;
+    if(addr != NULL) {
+        char *buf = malloc(strlen(addr) + 1);
+        strcpy(buf, addr);
+        newObj->clientAddr = buf;
+    }
     newObj->acceptedSSL = 0;
     newObj->curReadSize = 0;
     newObj->maxReadSize = bufferSize;
@@ -49,6 +52,8 @@ connObj *createConnObj(int connFd, ssize_t bufferSize, int port, char *addr)
 
     newObj->req = createRequestObj(newObj->serverPort, newObj->clientAddr);
     newObj->res = NULL;
+
+    newObj->CGIout = -1;
     return newObj;
 }
 
@@ -176,3 +181,11 @@ void setAcceptedSSL(connObj *connPtr)
 {
     connPtr->acceptedSSL = 1;
 }
+
+
+void cleanConnObjCGI(connObj *connPtr)
+{
+    close(connPtr->CGIout);
+    connPtr->CGIout = -1;
+    connPtr->wbStatus = lastRes;
+};

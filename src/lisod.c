@@ -28,8 +28,8 @@ int main(int argc, char *argv[])
     lockFile = argv[4];
     wwwFolder = argv[5];
     CGIFolder = argv[6];
-    crtFile= argv[7];
-    keyFile=argv[8];
+    keyFile= argv[7];
+    crtFile=argv[8];
 
 
     if(initLogger(logFile) == -1) {
@@ -57,6 +57,7 @@ int main(int argc, char *argv[])
                portHTTPS,
                newConnectionHandler,
                readConnectionHandler,
+               pipeConnectionHandler,
                processConnectionHandler,
                writeConnectionHandler,
                closeConnectionHandler,

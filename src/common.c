@@ -15,7 +15,7 @@ char *strTrim(char *str){
         str++;
     }
     if(*str=='\0'){
-        return NULL; //All space
+        return str; //All space
     }
     return str;
 }

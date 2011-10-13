@@ -18,7 +18,10 @@
 
 int newConnectionHandler(connObj *, char **);
 void readConnectionHandler(connObj *);
+void pipeConnectionHandler(connObj *);
 void processConnectionHandler(connObj *);
 void writeConnectionHandler(connObj *);
 int closeConnectionHandler(connObj *);
+
+void prepareNewConn(connObj *);
 #endif
