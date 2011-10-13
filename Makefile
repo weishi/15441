@@ -23,6 +23,7 @@ OBJECTS += httpResponder.o
 OBJECTS += fileIO.o
 OBJECTS += common.o
 OBJECTS += sslLib.o
+OBJECTS += daemonize.o
 
 LFLAGS=-lssl
 
