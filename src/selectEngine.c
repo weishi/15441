@@ -1,9 +1,11 @@
 #include "selectEngine.h"
 
+static int shutdownEngine;
+
 void initEngine(selectEngine *engine,
                 int portHTTP,
                 int portHTTPS,
-                int (*newConnHandler)(connObj *, char**),
+                int (*newConnHandler)(connObj *, char **),
                 void (*readConnHandler)(connObj *),
                 void (*pipeConnHandler)(connObj *),
                 void (*processConnHandler)(connObj *),
@@ -22,6 +24,7 @@ void initEngine(selectEngine *engine,
     engine->writeConnHandler = writeConnHandler;
     engine->closeConnHandler = closeConnHandler;
     engine->ctx = initSSL(crtFile, keyFile);
+    shutdownEngine = 0;
 }
 
 int startEngine(selectEngine *engine)
@@ -34,6 +37,32 @@ int startEngine(selectEngine *engine)
     return listenSocket(engine, httpFD, httpsFD);
 }
 
+void exitEngine(selectEngine *engine, DLL *connList)
+{
+    int i = 0;
+    int size = connList->size;
+    connObj *connPtr;
+    for(i = 0; i < size; i++) {
+        connPtr = getNodeDataAt(connList, i);
+        setConnObjClose(connPtr);
+    }
+    mapNode(connList);
+    /* Clean up SSL */
+    logger(LogDebug, "Clean up SSL.\n");
+    SSL_CTX_free(engine->ctx);
+
+}
+
+void signalExitEngine()
+{
+    shutdownEngine = 1;
+}
+
+void signalRestartEngine()
+{
+    shutdownEngine = 2;
+}
+
 int listenSocket(selectEngine *engine, int httpFD, int httpsFD)
 {
     int maxSocket = (httpFD > httpsFD) ? httpFD : httpsFD;
@@ -42,10 +71,17 @@ int listenSocket(selectEngine *engine, int httpFD, int httpsFD)
 
     fd_set readPool, writePool;
     initList(&socketList, compareConnObj, freeConnObj, mapConnObj);
-    insertNode(&socketList, createConnObj(httpFD, 0, 0, NULL));
-    insertNode(&socketList, createConnObj(httpsFD, 0, 0, NULL));
+    insertNode(&socketList, createConnObj(httpFD, 0, 0, NULL, T_HTTP));
+    insertNode(&socketList, createConnObj(httpsFD, 0, 0, NULL, T_HTTP));
     while(1) {
         logger(LogDebug, "Selecting...\n");
+        if(shutdownEngine != 0) {
+            int retVal = shutdownEngine;
+            shutdownEngine = 0;
+            exitEngine(engine, &socketList);
+            logger(LogDebug, "Cleaned up.\n");    
+            return retVal;
+        }
         createPool(&socketList, &readPool, &writePool, &maxSocket);
         numReady = select(maxSocket + 1, &readPool, &writePool, NULL, NULL);
         if(numReady < 0) {
@@ -79,7 +115,7 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, selectEngine *en
                 engine->readConnHandler(connPtr);
             }
             engine->processConnHandler(connPtr);
-            if(connPtr->CGIout!=-1 && FD_ISSET(connPtr->CGIout, readPool)) {
+            if(connPtr->CGIout != -1 && FD_ISSET(connPtr->CGIout, readPool)) {
                 logger(LogDebug, "Active CR [%d] ", connPtr->CGIout);
                 engine->pipeConnHandler(connPtr);
             }
@@ -97,7 +133,11 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, selectEngine *en
             int status = engine->newConnHandler(connPtr, &addr);
             if(status > 0) {
                 logger(LogDebug, "New HTTP connection accpted\n");
-                connPtr = createConnObj(status, BUF_SIZE, engine->portHTTP, addr);
+                connPtr = createConnObj(status,
+                        BUF_SIZE,
+                        engine->portHTTP,
+                        addr,
+                        T_HTTP);
                 setConnObjHTTP(connPtr);
                 insertNode(list, connPtr);
             } else {
@@ -112,7 +152,11 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, selectEngine *en
             int status = engine->newConnHandler(connPtr, &addr);
             if(status > 0) {
                 logger(LogDebug, "New HTTPS connection accpted\n");
-                connPtr = createConnObj(status, BUF_SIZE, engine->portHTTPS, addr);
+                connPtr = createConnObj(status,
+                        BUF_SIZE,
+                        engine->portHTTPS,
+                        addr,
+                        T_HTTPS);
                 setConnObjHTTPS(connPtr, engine->ctx);
                 insertNode(list, connPtr);
             } else {
@@ -153,22 +197,22 @@ void createPool(DLL *list, fd_set *readPool, fd_set *writePool, int *maxSocket)
             connPtr = ref->data;
             connFd = getConnObjSocket(connPtr);
             logger(LogDebug, "[%d", connFd);
-            if(!isFullConnObj(connPtr)) {
+            if(!isFullConnObj(connPtr) ) {
                 FD_SET(connFd, readPool);
                 max = (connFd > max) ? connFd : max;
                 logger(LogDebug, "R");
             }
-            if(!isEmptyConnObj(connPtr)) {
+            if(!isEmptyConnObj(connPtr) || isNewConnObj(connPtr)) {
                 FD_SET(connFd, writePool);
                 max = (connFd > max) ? connFd : max;
                 logger(LogDebug, "W");
             }
-            if(connPtr->CGIout!=-1){
+            logger(LogDebug, "]");
+            if(connPtr->CGIout != -1) {
                 FD_SET(connPtr->CGIout, readPool);
                 max = (connPtr->CGIout > max) ? connPtr->CGIout : max;
-                logger(LogDebug, "C");
+                logger(LogDebug, "[%dC]", connPtr->CGIout);
             }
-            logger(LogDebug, "]");
             i++;
             ref = ref->next;
         }

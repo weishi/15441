@@ -1,6 +1,6 @@
 #include "httpParser.h"
 
-requestObj *createRequestObj(int port, char *addr)
+requestObj *createRequestObj(int port, char *addr, int https)
 {
     char buf[16];
     requestObj *newObj = malloc(sizeof(requestObj));
@@ -13,6 +13,7 @@ requestObj *createRequestObj(int port, char *addr)
     newObj->contentLength = 0;
     newObj->statusCode = 0;
     newObj->curState = requestLine;
+    newObj->isNew = 1;
 
     newObj->isCGI = -1;
     newObj->envp = malloc(sizeof(DLL));
@@ -20,6 +21,11 @@ requestObj *createRequestObj(int port, char *addr)
     insertENVP(newObj, "REMOTE_ADDR", addr);
     snprintf(buf, 16, "%d", port);
     insertENVP(newObj, "SERVER_PORT", buf);
+    if(https) {
+        insertENVP(newObj, "HTTPS", "on");
+    } else {
+        insertENVP(newObj, "HTTPS", "off");
+    }
     return newObj;
 }
 void freeRequestObj(requestObj *req)
@@ -39,6 +45,10 @@ void freeRequestObj(requestObj *req)
     }
 }
 
+int isNewRequest(requestObj *req)
+{
+    return req->isNew;
+}
 
 enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size, int full)
 {
@@ -58,7 +68,6 @@ enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size, int full)
     char *nextPtr;
     ssize_t parsedSize;
     logger(LogDebug, "Start parsing %d bytes\n", *size);
-
     while(1) {
         if(req->curState == content) {
             nextPtr = bufEnd;
@@ -94,6 +103,9 @@ enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size, int full)
     /* clean up parsed buffer */
     if(thisPtr < bufEnd) {
         *size = thisPtr - (bufEnd - curSize);
+    }
+    if(req->isNew && *size > 0) {
+        req->isNew = 0;
     }
     /* Set return status */
     if(req->curState == requestError) {
@@ -252,7 +264,7 @@ void buildENVP(requestObj *req)
 {
     char *value;
     /* Parse URI */
-    char *uri=req->uri;
+    char *uri = req->uri;
     char *sep = strchr(uri, '?');
     char *pathInfo = uri + strlen("/cgi");
     char *queryString = NULL;
@@ -260,11 +272,11 @@ void buildENVP(requestObj *req)
         *sep = '\0';
         queryString = sep + 1;
     }
-    req->exePath=pathInfo;
+    req->exePath = pathInfo;
     insertENVP(req, "QUERY_STRING", queryString);
     insertENVP(req, "PATH_INFO", pathInfo);
     insertENVP(req, "REQUEST_URI", req->uri);
-    
+
     insertENVP(req, "GATEWAY_INTERFACE", "CGI/1.1");
     insertENVP(req, "SERVER_PROTOCOL", "HTTP/1.1");
     insertENVP(req, "SERVER_SOFTWARE", "Liso/1.0");
@@ -313,10 +325,13 @@ char *getMethodString(enum Method method)
     switch(method) {
     case GET:
         value = "GET";
+        break;
     case HEAD:
         value = "HEAD";
+        break;
     case POST:
         value = "POST";
+        break;
     default:
         value = "";
     }

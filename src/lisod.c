@@ -9,6 +9,7 @@
 
 int main(int argc, char *argv[])
 {
+    int retVal;
     int portHTTP, portHTTPS;
     char *logFile;
     char *lockFile;
@@ -28,9 +29,13 @@ int main(int argc, char *argv[])
     lockFile = argv[4];
     wwwFolder = argv[5];
     CGIFolder = argv[6];
-    keyFile= argv[7];
-    crtFile=argv[8];
-
+    keyFile = argv[7];
+    crtFile = argv[8];
+    
+    if(daemonize(lockFile)==EXIT_FAILURE){
+        printf("Error daemonizing.\n");
+        return EXIT_FAILURE;
+    }
 
     if(initLogger(logFile) == -1) {
         printf("Error opening logging file.\n");
@@ -41,9 +46,9 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
     logger(LogDebug, "HTTP = %d, HTTPS = %d\n"
-            "logFile = %s\nlockFile = %s\n"
-            "www = %s\nCGI = %s\n"
-            "crtFile = %s\nkeyFile = %s\n",
+           "logFile = %s\nlockFile = %s\n"
+           "www = %s\nCGI = %s\n"
+           "crtFile = %s\nkeyFile = %s\n",
            portHTTP,
            portHTTPS,
            logFile,
@@ -64,5 +69,9 @@ int main(int argc, char *argv[])
                crtFile,
                keyFile
               );
-    return startEngine(&engine);
+    do {
+        logger(LogProd, "Starting lisod...\n");
+        retVal = startEngine(&engine);
+    } while(retVal == 2);
+    return retVal;
 }

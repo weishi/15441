@@ -9,7 +9,7 @@
 #include <time.h>
 #include <sys/stat.h>
 
-#define CUR_LOG_LEVEL LogDebug
+#define CUR_LOG_LEVEL LogProd
 
 char *_lockFile;
 char *_wwwFolder;

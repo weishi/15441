@@ -12,6 +12,7 @@
 #include "connHandler.h"
 #include "sslLib.h"
 
+
 typedef struct selectEngine {
     int portHTTP;
     int portHTTPS;
@@ -38,9 +39,12 @@ void initEngine(selectEngine *engine,
                );
 
 int startEngine(selectEngine *);
+void exitEngine(selectEngine *, DLL*);
 int listenSocket(selectEngine *, int, int);
 int openSocket(int);
 int closeSocket(int);
+void signalExitEngine();
+void signalRestartEngine();
 
 void createPool(DLL *, fd_set *, fd_set *, int *);
 void handlePool(DLL *, fd_set *, fd_set *, selectEngine *);

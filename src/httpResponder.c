@@ -72,6 +72,7 @@ char **fillENVP(requestObj *req)
         strcat(line, "=");
         strcat(line, hd->value);
         ret[i] = line;
+        logger(LogDebug, "%s\n", line);
     }
     ret[i] = NULL;
     return ret;

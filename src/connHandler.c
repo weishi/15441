@@ -162,6 +162,18 @@ void writeConnectionHandler(connObj *connPtr)
     if(retSize == -1 && errno == EINTR) {
         return ;
     }
+    if(retSize == -1 && isHTTPS(connPtr) ) {
+        int err = SSL_get_error(connPtr->connSSL, retSize);
+        switch(err) {
+        case SSL_ERROR_WANT_READ:
+        case SSL_ERROR_WANT_WRITE:
+            logger(LogProd, "SSL WANT MORE.\n");
+            return;
+        default:
+            ERR_print_errors_fp(getLogger());
+            break;
+        }
+    }
     if (retSize != size) {
         logger(LogProd, "Error sending to client.\n");
         setConnObjClose(connPtr);
@@ -187,7 +199,8 @@ void prepareNewConn(connObj *connPtr)
             freeRequestObj(connPtr->req);
             connPtr->req = createRequestObj(
                                connPtr->serverPort,
-                               connPtr->clientAddr);
+                               connPtr->clientAddr,
+                               (connPtr->connType == T_HTTPS) ? 1 : 0);
         }
     }
 }

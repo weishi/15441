@@ -20,6 +20,9 @@ void freeConnObj(void *data)
     connPtr->req = NULL;
     freeResponseObj(connPtr->res);
     connPtr->res = NULL;
+    if(connPtr->CGIout > 0) {
+        close(connPtr->CGIout);
+    }
     free(connPtr);
 }
 
@@ -29,7 +32,11 @@ int mapConnObj(void *data)
 }
 
 
-connObj *createConnObj(int connFd, ssize_t bufferSize, int port, char *addr)
+connObj *createConnObj(int connFd,
+                       ssize_t bufferSize,
+                       int port,
+                       char *addr,
+                       enum HTTPType connType )
 {
     connObj *newObj = malloc(sizeof(connObj));
     newObj->connFd = connFd;
@@ -40,6 +47,7 @@ connObj *createConnObj(int connFd, ssize_t bufferSize, int port, char *addr)
         strcpy(buf, addr);
         newObj->clientAddr = buf;
     }
+    newObj->connType = connType;
     newObj->acceptedSSL = 0;
     newObj->curReadSize = 0;
     newObj->maxReadSize = bufferSize;
@@ -50,7 +58,9 @@ connObj *createConnObj(int connFd, ssize_t bufferSize, int port, char *addr)
     newObj->readBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
     newObj->writeBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
 
-    newObj->req = createRequestObj(newObj->serverPort, newObj->clientAddr);
+    newObj->req = createRequestObj(newObj->serverPort,
+                                   newObj->clientAddr,
+                                   (newObj->connType == T_HTTPS) ? 1 : 0 );
     newObj->res = NULL;
 
     newObj->CGIout = -1;
@@ -143,9 +153,13 @@ int isEmptyConnObj(connObj *connPtr)
     }
 }
 
+int isNewConnObj(connObj *connPtr)
+{
+    return connPtr->curReadSize > 0;
+}
+
 void setConnObjHTTP(connObj *connPtr)
 {
-    connPtr->connType = T_HTTP;
     connPtr->connSSL = NULL;
 }
 
@@ -159,7 +173,6 @@ void setConnObjHTTPS(connObj *connPtr, SSL_CTX *ctx)
     SSL *sslPtr = SSL_new(ctx);
     SSL_set_fd(sslPtr, connPtr->connFd);
     connPtr->connSSL = sslPtr;
-    connPtr->connType = T_HTTPS;
 }
 
 int isHTTP(connObj *connPtr)

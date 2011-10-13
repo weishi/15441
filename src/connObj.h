@@ -51,7 +51,7 @@ void freeConnObj(void *data);
 int mapConnObj(void *data);
 
 /* Constructor */
-connObj *createConnObj(int, ssize_t, int, char *);
+connObj *createConnObj(int, ssize_t, int, char *, enum HTTPType);
 
 /* Getters and Setters */
 int getConnObjSocket(connObj *);
@@ -76,6 +76,7 @@ int hasAcceptedSSL(connObj *);
 void setAcceptedSSL(connObj *);
 int isFullConnObj(connObj *);
 int isEmptyConnObj(connObj *);
+int isNewConnObj(connObj *);
 
 void cleanConnObjCGI(connObj *);
 

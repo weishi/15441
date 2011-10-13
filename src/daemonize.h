@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "selectEngine.h"
 
 void signal_handler(int);
 
