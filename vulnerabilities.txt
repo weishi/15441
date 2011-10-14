@@ -6,3 +6,5 @@ out of file descriptor.
 
 3. Some corner case of LWS(linear white space) in request between keywords
 is not honored.
+
+4. Connection:close is not honored in CGI requests.

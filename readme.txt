@@ -1,4 +1,4 @@
-HTTP/1.1 server implementation
+HTTP/1.1 + CGI server implementation
 
 + Components
 
@@ -9,6 +9,8 @@ Select engine: handles the incoming connection at listening
 Http handler:
     1) Http Parser: parse data from buffer and build up a request object
     2) Http Responder: take request object and build up a response object
+        It builds regular HTTP responses as well as CGI responses, depending on
+        the URI. 
 Socket container: an abstraction model, which contains socket
      status and provides socket operation.
 Connection handler: provides an interface between high level parser and low level 
@@ -17,7 +19,7 @@ Linked list: a linked list implementation, used to track
      active socketsi, and header key/value pair.
 Common lib: supplement to c string lib
 FileIO lib: handle will file related operation, eg open, write, get metadata
-
+SSL lib: initial and tear down SSL context and connections.
 
 + Algorithm
 
@@ -43,3 +45,6 @@ If buffer is not empty, do
         Take the whole buffer
         Append correct length of data, depending on Content-length and length read so far
 
+SSL:
+Use standard TLS algorithm in OpenSSL library to support HTTPS.
+ 

@@ -13,6 +13,8 @@ Test methods
     2) Use Chrome browser to view static_site, and analyze request/response with
     Fiddler(a tool similar to Wireshark).
 
+    3) Run CGI with Flask. Check post/read/login functions.
+
 + Memory leak test
            
     Run server with valgrind. Initial multiple connections with siege.
@@ -30,6 +32,15 @@ Test methods
 
 + Stress test
                           
-   Initial a huge amount of connections and trials with ab/siege. Let the
-   server runs for a long time (~10min). See how the server behaves under high
-   load and check if there are failed transaction in ab/siege reports.
+    1) Initial a huge amount of connections and trials with ab/siege. Let the
+    server runs for a long time (~10min). See how the server behaves under high
+    load and check if there are failed transaction in ab/siege reports.
+
+    2) Also use online http stress test tool: http://loadimpact.com
+
++ SSL test
+    
+    1) Connect with Chrome and check the certificate information in address bar.
+
+    2) Run Flask on SSL port and check post/read/login functions.
+
