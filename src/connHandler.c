@@ -72,8 +72,10 @@ void pipeConnectionHandler(connObj *connPtr)
     if(size > 0) {
         ssize_t retSize = read(connPtr->CGIout, buf, size);
         if(retSize > 0) {
+            logger(LogDebug, "%d bytes read from CGI pipe\n", retSize);
             addConnObjWriteSize(connPtr, retSize);
         } else if(retSize == 0) {
+            logger(LogDebug, "CGI pipe broken\n", retSize);
             cleanConnObjCGI(connPtr);
         } else {
             if(errno != EINTR) {

@@ -64,7 +64,11 @@ fileMetadata *prepareFile(char *uri, char *mode)
 char *loadFile(fileMetadata *fm)
 {
     char *buffer = calloc(fm->length + 1, 1);
-    fread(buffer, fm->length, 1, fm->fd);
+    size_t retSize;
+    retSize=fread(buffer, fm->length, 1, fm->fd);
+    if(retSize==0){
+        buffer[0]='\0';
+    }
     fclose(fm->fd);
     return buffer;
 }

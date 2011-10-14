@@ -17,6 +17,7 @@ void signal_handler(int sig)
 int daemonize(char *lock_file)
 {
     int i, lfp, pid = fork();
+    ssize_t retSize;
     char str[256] = {0};
     if (pid < 0) exit(EXIT_FAILURE);
     if (pid > 0) exit(EXIT_SUCCESS);
@@ -27,8 +28,12 @@ int daemonize(char *lock_file)
         close(i);
 
     i = open("/dev/null", O_RDWR);
-    dup(i);
-    dup(i);
+    if(-1 == dup(i)) {
+        return EXIT_FAILURE;
+    }
+    if(-1 == dup(i)) {
+        return EXIT_FAILURE;
+    }
     umask(027);
 
     lfp = open(lock_file, O_RDWR | O_CREAT | O_EXCL, 0640);
@@ -40,8 +45,11 @@ int daemonize(char *lock_file)
         exit(EXIT_SUCCESS);
 
     sprintf(str, "%d\n", getpid());
-    write(lfp, str, strlen(str));
-    
+    retSize=strlen(str);
+    if(retSize != write(lfp, str, retSize)) {
+        return EXIT_FAILURE;
+    }
+
     signal(SIGCHLD, SIG_IGN);
     signal(SIGHUP, signal_handler);
     signal(SIGTERM, signal_handler);
