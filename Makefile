@@ -1,5 +1,6 @@
 #
 # Makefile for Project 1
+# Liso HTTP/1.1 Web Server
 #
 # Wei Shi <weishi@andrew.cmu.edu>
 #
