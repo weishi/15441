@@ -5,12 +5,10 @@ SSL_CTX *initSSL(char *crtFile, char *keyFile)
 {
 
     SSL_CTX *ctx;
-    SSL_METHOD *method;
     //OpenSSL_add_all_algorithms();
     SSL_library_init();
     SSL_load_error_strings();
-    method = TLSv1_server_method();
-    ctx = SSL_CTX_new(method);
+    ctx = SSL_CTX_new(TLSv1_server_method());
 
     if(ctx == NULL) {
         logger(LogProd, "Error creating CTX object\n");

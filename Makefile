@@ -10,7 +10,7 @@ $(CC) $(CLFAGS) $< -o $@
 endef
 
 CC=gcc
-CFLAGS=-Wall -Werror -Wextra -Wshadow -Wunreachable-code -O2 -D_FORTIFY_SOURCE=2
+CFLAGS=-Wall -Werror -O2 
 SOURCE=src
 VPATH=$(SOURCE)
 OBJECTS = lisod.o
