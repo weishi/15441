@@ -1,0 +1,8 @@
+body {  background-color: #fff; font-family: Serif; font-size: 1.2em;
+        color: #000; text-shadow: #808080 0.1em 0.1em 0.2em; }
+img { display: block; margin: auto; }
+p { text-align: justify; margin-top: 25px; }
+
+a { color: #808080; text-decoration: none; }
+
+#page { width: 800px; margin: auto; }
