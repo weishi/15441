@@ -1,0 +1,46 @@
+Test methods
+
++ Initial Debug test
+
+    Use a telnet client to connect to server. Type some requests in terminal and
+    see if the response is expected and eyeball the server log.
+
++ Correctness test
+
+    1) Host static_site with Apache server and Liso server. Send request to both
+    server and see if the response matches.
+
+    2) Use Chrome browser to view static_site, and analyze request/response with
+    Fiddler(a tool similar to Wireshark).
+
+    3) Run CGI with Flask. Check post/read/login functions.
+
++ Memory leak test
+           
+    Run server with valgrind. Initial multiple connections with siege.
+    After a while kill siege and the server to see if there are **definitely lost**
+    memory blocks.
+                  
++ Evil test
+
+    1) Initial multiple connections with ab/siege. Kill the process while
+    it is still running. See if the server cleans up the closed sockets and
+    buffers. Also use valgrind to make sure no memory leak in this case.
+
+    2) Send crafted headers that are close to the size of buffer boardary with
+    Fiddler and see if server handles them correctly when headers straddle buffer.
+
++ Stress test
+                          
+    1) Initial a huge amount of connections and trials with ab/siege. Let the
+    server runs for a long time (~10min). See how the server behaves under high
+    load and check if there are failed transaction in ab/siege reports.
+
+    2) Also use online http stress test tool: http://loadimpact.com
+
++ SSL test
+    
+    1) Connect with Chrome and check the certificate information in address bar.
+
+    2) Run Flask on SSL port and check post/read/login functions.
+

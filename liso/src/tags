@@ -1,0 +1,274 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+BAD_REQUEST	httpParser.h	/^    BAD_REQUEST = 400,$/;"	e	enum:StatusCode
+BUF_SIZE	connHandler.h	16;"	d
+BUF_SIZE	httpHandler.h	14;"	d
+CC	Makefile	/^CC=gcc$/;"	m
+CGIout	connObj.h	/^    int CGIout;$/;"	m	struct:connObj
+CGIout	httpResponder.h	/^    int CGIout;$/;"	m	struct:responseObj
+COMMOM_H	commom.h	2;"	d
+COMMOM_H	common.h	2;"	d
+CONNHANDLER_H	connHandler.h	2;"	d
+CONNOBJ_H	connObj.h	2;"	d
+CONNOBJ_H	socketContainer.h	2;"	d
+CSS	fileIO.h	/^    CSS,$/;"	e	enum:MIMEType
+CUR_LOG_LEVEL	fileIO.h	12;"	d
+DAEMONIZE_H	daemonize.h	2;"	d
+DLL	linkedList.h	/^typedef struct DLL {$/;"	s
+DLL	linkedList.h	/^} DLL;$/;"	t	typeref:struct:DLL
+FILEIO_H	fileIO.h	2;"	d
+GET	httpParser.h	/^    GET,$/;"	e	enum:Method
+GIF	fileIO.h	/^    GIF,$/;"	e	enum:MIMEType
+HEAD	httpParser.h	/^    HEAD,$/;"	e	enum:Method
+HTML	fileIO.h	/^    HTML,$/;"	e	enum:MIMEType
+HTTPHANDLER_H	httpHandler.h	2;"	d
+HTTPHEADER_H	httpHeader.h	2;"	d
+HTTPPARSER_H	httpParser.h	2;"	d
+HTTPRESPONDER_H	httpResponder.h	2;"	d
+HTTPType	connObj.h	/^enum HTTPType {$/;"	g
+HTTP_VERSION_NOT_SUPPORTED	httpParser.h	/^    HTTP_VERSION_NOT_SUPPORTED = 505,$/;"	e	enum:StatusCode
+INTERNAL_SERVER_ERROR	httpParser.h	/^    INTERNAL_SERVER_ERROR = 500,$/;"	e	enum:StatusCode
+JPEG	fileIO.h	/^    JPEG,$/;"	e	enum:MIMEType
+LENGTH_REQUIRED	httpParser.h	/^    LENGTH_REQUIRED = 411,$/;"	e	enum:StatusCode
+LINKEDLIST_H	linkedList.h	2;"	d
+LISOD_H	lisod.h	2;"	d
+LogDebug	fileIO.h	/^    LogDebug=1,$/;"	e	enum:LogLevel
+LogLevel	fileIO.h	/^enum LogLevel{$/;"	g
+LogProd	fileIO.h	/^    LogProd=2,$/;"	e	enum:LogLevel
+MIMEType	fileIO.h	/^enum MIMEType{$/;"	g
+Method	httpParser.h	/^enum Method {$/;"	g
+NOT_FOUND	httpParser.h	/^    NOT_FOUND = 404,$/;"	e	enum:StatusCode
+NOT_IMPLEMENTED	httpParser.h	/^    NOT_IMPLEMENTED = 501,$/;"	e	enum:StatusCode
+Node	linkedList.h	/^typedef struct Node {$/;"	s
+Node	linkedList.h	/^} Node;$/;"	t	typeref:struct:Node
+OBJECTS	Makefile	/^OBJECTS=lisod.o selectEngine.o linkedList.o httpHandler.o connObj.o$/;"	m
+OK	httpParser.h	/^    OK = 200,$/;"	e	enum:StatusCode
+OTHER	fileIO.h	/^    OTHER,$/;"	e	enum:MIMEType
+PNG	fileIO.h	/^    PNG,$/;"	e	enum:MIMEType
+POST	httpParser.h	/^    POST,$/;"	e	enum:Method
+ParseError	httpParser.h	/^    ParseError,$/;"	e	enum:Status
+Parsed	httpParser.h	/^    Parsed,$/;"	e	enum:Status
+Parsing	httpParser.h	/^    Parsing,$/;"	e	enum:Status
+SELECTENGINE_H	selectEngine.h	2;"	d
+SERVICE_UNAVAILABLE	httpParser.h	/^    SERVICE_UNAVAILABLE = 503,$/;"	e	enum:StatusCode
+SSLLIB_H	sslLib.h	2;"	d
+State	httpParser.h	/^enum State {$/;"	g
+Status	httpParser.h	/^enum Status {$/;"	g
+StatusCode	httpParser.h	/^enum StatusCode {$/;"	g
+T_HTTP	connObj.h	/^    T_HTTP,$/;"	e	enum:HTTPType
+T_HTTPS	connObj.h	/^    T_HTTPS,$/;"	e	enum:HTTPType
+UNIMPLEMENTED	httpParser.h	/^    UNIMPLEMENTED,$/;"	e	enum:Method
+USAGE	lisod.h	14;"	d
+_CGIFolder	fileIO.h	/^char *_CGIFolder;$/;"	v
+_lockFile	fileIO.h	/^char *_lockFile;$/;"	v
+_wwwFolder	fileIO.h	/^char *_wwwFolder;$/;"	v
+acceptedSSL	connObj.h	/^    int acceptedSSL;$/;"	m	struct:connObj
+addConnObjReadSize	connObj.c	/^void addConnObjReadSize(connObj *connPtr, ssize_t readSize)$/;"	f
+addConnObjWriteSize	connObj.c	/^void addConnObjWriteSize(connObj *connPtr, ssize_t writeSize)$/;"	f
+addStatusLine	httpResponder.c	/^int addStatusLine(responseObj *res, requestObj *req)$/;"	f
+applyList	linkedList.c	/^void applyList(DLL *list, void (*applyMe)(void *) )$/;"	f
+buffer	socketContainer.h	/^    char *buffer;$/;"	m	struct:connObj
+buildCGIResponseObj	httpResponder.c	/^int buildCGIResponseObj(responseObj *res, requestObj *req)$/;"	f
+buildENVP	httpParser.c	/^void buildENVP(requestObj *req)$/;"	f
+buildHTTPResponseObj	httpResponder.c	/^void buildHTTPResponseObj(responseObj *res, requestObj *req)$/;"	f
+buildResponseObj	httpResponder.c	/^void buildResponseObj(responseObj *res, requestObj *req)$/;"	f
+cleanConnObjCGI	connObj.c	/^void cleanConnObjCGI(connObj *connPtr)$/;"	f
+clientAddr	connObj.h	/^    char *clientAddr;$/;"	m	struct:connObj
+close	httpResponder.h	/^    int close;$/;"	m	struct:responseObj
+closeConnHandler	selectEngine.h	/^    int (*closeConnHandler)(connObj *);$/;"	m	struct:selectEngine
+closeConnectionHandler	connHandler.c	/^int closeConnectionHandler(connObj *connPtr)$/;"	f
+closeConnectionHandler	httpHandler.c	/^int closeConnectionHandler(connObj *connPtr)$/;"	f
+closeSocket	selectEngine.c	/^int closeSocket(int sock)$/;"	f
+compare	linkedList.h	/^    int (*compare)(void *, void *);$/;"	m	struct:DLL
+compareConnObj	connObj.c	/^int compareConnObj(void *data1, void *data2)$/;"	f
+compareHeaderEntry	httpHeader.c	/^int compareHeaderEntry(void *data1, void *data2)$/;"	f
+compareInt	linkedList.c	/^int compareInt(void *data1, void *data2)$/;"	f
+connFd	connObj.h	/^    int connFd;$/;"	m	struct:connObj
+connObj	connObj.h	/^typedef struct connObj {$/;"	s
+connObj	connObj.h	/^} connObj;$/;"	t	typeref:struct:connObj
+connObj	socketContainer.h	/^typedef struct connObj {$/;"	s
+connObj	socketContainer.h	/^} connObj;$/;"	t	typeref:struct:connObj
+connSSL	connObj.h	/^    SSL *connSSL;$/;"	m	struct:connObj
+connType	connObj.h	/^    enum HTTPType connType;$/;"	m	struct:connObj	typeref:enum:connObj::HTTPType
+content	httpParser.h	/^    char *content;$/;"	m	struct:requestObj
+content	httpParser.h	/^    content,$/;"	e	enum:State
+contentLength	httpParser.h	/^    int contentLength;$/;"	m	struct:requestObj
+createConnObj	connObj.c	/^connObj *createConnObj(int connFd,$/;"	f
+createPath	fileIO.c	/^char *createPath(char *dir, char *path, char *fileName)$/;"	f
+createPool	selectEngine.c	/^void createPool(DLL *list, fd_set *readPool, fd_set *writePool, int *maxSocket)$/;"	f
+createRequestObj	httpParser.c	/^requestObj *createRequestObj(int port, char *addr, int https)$/;"	f
+createResponseObj	httpResponder.c	/^responseObj *createResponseObj()$/;"	f
+ctx	selectEngine.h	/^    SSL_CTX *ctx;$/;"	m	struct:selectEngine
+curReadSize	connObj.h	/^    ssize_t curReadSize;$/;"	m	struct:connObj
+curState	httpParser.h	/^    enum State curState;$/;"	m	struct:requestObj	typeref:enum:requestObj::State
+curWriteSize	connObj.h	/^    ssize_t curWriteSize;$/;"	m	struct:connObj
+daemonize	daemonize.c	/^int daemonize(char *lock_file)$/;"	f
+data	linkedList.h	/^    void *data;$/;"	m	struct:Node
+doneRes	connObj.h	/^    doneRes,$/;"	e	enum:writeStatus
+envp	httpParser.h	/^    DLL *envp;$/;"	m	struct:requestObj
+exePath	httpParser.h	/^    char *exePath;$/;"	m	struct:requestObj
+exitEngine	selectEngine.c	/^void exitEngine(selectEngine *engine, DLL *connList)$/;"	f
+fd	fileIO.h	/^   FILE *fd;$/;"	m	struct:fileMetadata
+fileBuffer	httpResponder.h	/^    char *fileBuffer;$/;"	m	struct:responseObj
+fileMeta	httpResponder.h	/^    fileMetadata *fileMeta;$/;"	m	struct:responseObj
+fileMetadata	fileIO.h	/^typedef struct fileMetadata{$/;"	s
+fileMetadata	fileIO.h	/^} fileMetadata;$/;"	t	typeref:struct:fileMetadata
+filePtr	httpResponder.h	/^    size_t filePtr;$/;"	m	struct:responseObj
+fillENVP	httpResponder.c	/^char **fillENVP(requestObj *req)$/;"	f
+fillHeader	httpResponder.c	/^void fillHeader(responseObj *res)$/;"	f
+freeConnObj	connObj.c	/^void freeConnObj(void *data)$/;"	f
+freeData	linkedList.h	/^    void (*freeData)(void *);$/;"	m	struct:DLL
+freeFileMeta	fileIO.c	/^void freeFileMeta(fileMetadata *fm)$/;"	f
+freeHeaderEntry	httpHeader.c	/^void freeHeaderEntry(void *data)$/;"	f
+freeInt	linkedList.c	/^void freeInt(void *data)$/;"	f
+freeList	linkedList.c	/^void freeList(DLL *list)$/;"	f
+freeRequestObj	httpParser.c	/^void freeRequestObj(requestObj *req)$/;"	f
+freeResponseObj	httpResponder.c	/^void freeResponseObj(responseObj *res)$/;"	f
+getCGIPath	fileIO.c	/^char *getCGIPath(){$/;"	f
+getConnObjReadBufferForRead	connObj.c	/^void getConnObjReadBufferForRead(connObj *connPtr, char **buf, ssize_t *size)$/;"	f
+getConnObjReadBufferForWrite	connObj.c	/^void getConnObjReadBufferForWrite(connObj *connPtr, char **buf, ssize_t *size)$/;"	f
+getConnObjSocket	connObj.c	/^int getConnObjSocket(connObj *connPtr)$/;"	f
+getConnObjWriteBufferForRead	connObj.c	/^void getConnObjWriteBufferForRead(connObj *connPtr, char **buf, ssize_t *size)$/;"	f
+getConnObjWriteBufferForWrite	connObj.c	/^void getConnObjWriteBufferForWrite(connObj *connPtr, char **buf, ssize_t *size)$/;"	f
+getContentLength	fileIO.c	/^char *getContentLength(fileMetadata *fm)$/;"	f
+getContentType	fileIO.c	/^char *getContentType(fileMetadata *fm)$/;"	f
+getFilePath	fileIO.c	/^char *getFilePath(fileMetadata *fm)$/;"	f
+getFileType	fileIO.c	/^enum MIMEType getFileType(char *path)$/;"	f
+getHTTPDate	httpResponder.c	/^char *getHTTPDate(time_t tmraw)$/;"	f
+getLastMod	fileIO.c	/^time_t getLastMod(fileMetadata *fm)$/;"	f
+getLogger	fileIO.c	/^FILE* getLogger(){$/;"	f
+getMethodString	httpParser.c	/^char *getMethodString(enum Method method)$/;"	f
+getNodeAt	linkedList.c	/^Node *getNodeAt(DLL *list, int idx)$/;"	f
+getNodeDataAt	linkedList.c	/^void *getNodeDataAt(DLL *list, int idx)$/;"	f
+getValueByKey	httpHeader.c	/^char *getValueByKey(DLL *headerList, char *key)$/;"	f
+handlePool	selectEngine.c	/^void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, selectEngine *engine)$/;"	f
+hasAcceptedSSL	connObj.c	/^int hasAcceptedSSL(connObj *connPtr)$/;"	f
+head	linkedList.h	/^    Node *head;$/;"	m	struct:DLL
+header	httpParser.h	/^    DLL *header;$/;"	m	struct:requestObj
+header	httpResponder.h	/^    DLL *header;$/;"	m	struct:responseObj
+headerBuffer	httpResponder.h	/^    char *headerBuffer;$/;"	m	struct:responseObj
+headerEntry	httpHeader.h	/^typedef struct headerEntry {$/;"	s
+headerEntry	httpHeader.h	/^} headerEntry;$/;"	t	typeref:struct:headerEntry
+headerLine	httpParser.h	/^    headerLine,$/;"	e	enum:State
+headerPtr	httpResponder.h	/^    size_t headerPtr;$/;"	m	struct:responseObj
+httpParse	httpParser.c	/^enum Status httpParse(requestObj *req, char *bufPtr, ssize_t *size, int full)$/;"	f
+httpParseLine	httpParser.c	/^void httpParseLine(requestObj *req, char *line, ssize_t lineSize, ssize_t *parsedSize)$/;"	f
+initEngine	selectEngine.c	/^void initEngine(selectEngine *engine,$/;"	f
+initFileIO	fileIO.c	/^int initFileIO(char *lockFile, char *wwwFolder, char *CGIFolder)$/;"	f
+initList	linkedList.c	/^void initList(DLL *list,$/;"	f
+initLogger	fileIO.c	/^int initLogger(char *logFile)$/;"	f
+initRes	connObj.h	/^    initRes,$/;"	e	enum:writeStatus
+initSSL	sslLib.c	/^SSL_CTX *initSSL(char *crtFile, char *keyFile)$/;"	f
+insertENVP	httpParser.c	/^void insertENVP(requestObj *req, char *key, char *value)$/;"	f
+insertNode	linkedList.c	/^void insertNode(DLL *list, void *data)$/;"	f
+isCGI	httpParser.h	/^    int isCGI;$/;"	m	struct:requestObj
+isCGI	httpResponder.h	/^    int isCGI;$/;"	m	struct:responseObj
+isCGIRequest	httpParser.c	/^int isCGIRequest(requestObj *req)$/;"	f
+isCGIResponse	httpResponder.c	/^int isCGIResponse(responseObj *res)$/;"	f
+isEmptyConnObj	connObj.c	/^int isEmptyConnObj(connObj *connPtr)$/;"	f
+isFullConnObj	connObj.c	/^int isFullConnObj(connObj *connPtr)$/;"	f
+isHTTP	connObj.c	/^int isHTTP(connObj *connPtr)$/;"	f
+isHTTPS	connObj.c	/^int isHTTPS(connObj *connPtr)$/;"	f
+isNew	httpParser.h	/^    int isNew;$/;"	m	struct:requestObj
+isNewConnObj	connObj.c	/^int isNewConnObj(connObj *connPtr)$/;"	f
+isNewRequest	httpParser.c	/^int isNewRequest(requestObj *req)$/;"	f
+isOpen	connObj.h	/^    int isOpen;$/;"	m	struct:connObj
+isValidRequest	httpParser.c	/^int isValidRequest(requestObj *req)$/;"	f
+key	httpHeader.h	/^    char *key;$/;"	m	struct:headerEntry
+lastMod	fileIO.h	/^   time_t lastMod;$/;"	m	struct:fileMetadata
+lastRes	connObj.h	/^    lastRes,$/;"	e	enum:writeStatus
+length	fileIO.h	/^   int length;$/;"	m	struct:fileMetadata
+listenSocket	selectEngine.c	/^int listenSocket(selectEngine *engine, int httpFD, int httpsFD)$/;"	f
+loadFile	fileIO.c	/^char *loadFile(fileMetadata *fm)$/;"	f
+logFD	fileIO.h	/^FILE* logFD;$/;"	v
+logger	fileIO.c	/^void logger(enum LogLevel level, const char *format, ...)$/;"	f
+m	httpParser.h	/^    enum Method m;$/;"	m	struct:methodEntry	typeref:enum:methodEntry::Method
+main	lisod.c	/^int main(int argc, char *argv[])$/;"	f
+map	linkedList.h	/^    int (*map)(void *);$/;"	m	struct:DLL
+mapConnObj	connObj.c	/^int mapConnObj(void *data)$/;"	f
+mapNode	linkedList.c	/^void mapNode(DLL *list)$/;"	f
+maxFilePtr	httpResponder.h	/^    size_t maxFilePtr;$/;"	m	struct:responseObj
+maxHeaderPtr	httpResponder.h	/^    size_t maxHeaderPtr;$/;"	m	struct:responseObj
+maxReadSize	connObj.h	/^    ssize_t maxReadSize;$/;"	m	struct:connObj
+maxWriteSize	connObj.h	/^    ssize_t maxWriteSize;$/;"	m	struct:connObj
+method	httpParser.h	/^    enum Method method;$/;"	m	struct:requestObj	typeref:enum:requestObj::Method
+methodEntry	httpParser.h	/^struct methodEntry {$/;"	s
+methodEntry	httpParser.h	/^} methodEntry;$/;"	v	typeref:struct:methodEntry
+newConnHandler	selectEngine.h	/^    int  (*newConnHandler)(connObj *, char **);$/;"	m	struct:selectEngine
+newConnectionHandler	connHandler.c	/^int newConnectionHandler(connObj *connPtr, char **addr)$/;"	f
+newConnectionHandler	httpHandler.c	/^int newConnectionHandler(connObj *connPtr)$/;"	f
+newENVPEntry	httpHeader.c	/^headerEntry *newENVPEntry(char *key, char *value)$/;"	f
+newHeaderEntry	httpHeader.c	/^headerEntry *newHeaderEntry(char *key, char *value)$/;"	f
+next	linkedList.h	/^    struct Node *next;$/;"	m	struct:Node	typeref:struct:Node::Node
+nextToken	httpParser.c	/^char *nextToken(char *buf, char *bufEnd)$/;"	f
+openSocket	selectEngine.c	/^int openSocket(int port)$/;"	f
+path	fileIO.h	/^   char *path;$/;"	m	struct:fileMetadata
+pid	httpResponder.h	/^    pid_t pid;$/;"	m	struct:responseObj
+pipeConnHandler	selectEngine.h	/^    void (*pipeConnHandler)(connObj *);$/;"	m	struct:selectEngine
+pipeConnectionHandler	connHandler.c	/^void pipeConnectionHandler(connObj *connPtr)$/;"	f
+portHTTP	selectEngine.h	/^    int portHTTP;$/;"	m	struct:selectEngine
+portHTTPS	selectEngine.h	/^    int portHTTPS;$/;"	m	struct:selectEngine
+prepareFile	fileIO.c	/^fileMetadata *prepareFile(char *uri, char *mode)$/;"	f
+prepareNewConn	connHandler.c	/^void prepareNewConn(connObj *connPtr)$/;"	f
+prev	linkedList.h	/^    struct Node *prev;$/;"	m	struct:Node	typeref:struct:Node::Node
+printHeaderEntry	httpHeader.c	/^void printHeaderEntry(void *data)$/;"	f
+printRequest	httpParser.c	/^void printRequest(const requestObj *req)$/;"	f
+printResponse	httpResponder.c	/^void printResponse(responseObj *res)$/;"	f
+processConnHandler	selectEngine.h	/^    void (*processConnHandler)(connObj *);$/;"	m	struct:selectEngine
+processConnectionHandler	connHandler.c	/^void processConnectionHandler(connObj *connPtr)$/;"	f
+readBuffer	connObj.h	/^    char *readBuffer;$/;"	m	struct:connObj
+readConnHandler	selectEngine.h	/^    void (*readConnHandler)(connObj *);$/;"	m	struct:selectEngine
+readConnectionHandler	connHandler.c	/^void readConnectionHandler(connObj *connPtr)$/;"	f
+readConnectionHandler	httpHandler.c	/^void readConnectionHandler(connObj *connPtr)$/;"	f
+removeConnObjReadSize	connObj.c	/^void removeConnObjReadSize(connObj *connPtr, ssize_t readSize)$/;"	f
+removeConnObjWriteSize	connObj.c	/^void removeConnObjWriteSize(connObj *connPtr, ssize_t writeSize)$/;"	f
+removeNode	linkedList.c	/^void removeNode(DLL *list, Node *deadNode)$/;"	f
+removeNodeAt	linkedList.c	/^void removeNodeAt(DLL *list, int idx)$/;"	f
+req	connObj.h	/^    requestObj *req;$/;"	m	struct:connObj
+requestDone	httpParser.h	/^    requestDone,$/;"	e	enum:State
+requestError	httpParser.h	/^    requestError,$/;"	e	enum:State
+requestLine	httpParser.h	/^    requestLine,$/;"	e	enum:State
+requestObj	httpParser.h	/^typedef struct requestObj {$/;"	s
+requestObj	httpParser.h	/^} requestObj;$/;"	t	typeref:struct:requestObj
+res	connObj.h	/^    responseObj *res;$/;"	m	struct:connObj
+responseObj	httpResponder.h	/^typedef struct responseObj {$/;"	s
+responseObj	httpResponder.h	/^} responseObj;$/;"	t	typeref:struct:responseObj
+s	httpParser.h	/^    char *s;$/;"	m	struct:methodEntry
+searchList	linkedList.c	/^Node *searchList( DLL *list, void *target )$/;"	f
+selectEngine	selectEngine.h	/^typedef struct selectEngine {$/;"	s
+selectEngine	selectEngine.h	/^} selectEngine;$/;"	t	typeref:struct:selectEngine
+serverPort	connObj.h	/^    int serverPort;$/;"	m	struct:connObj
+setAcceptedSSL	connObj.c	/^void setAcceptedSSL(connObj *connPtr)$/;"	f
+setConnObjClose	connObj.c	/^void setConnObjClose(connObj *connPtr)$/;"	f
+setConnObjHTTP	connObj.c	/^void setConnObjHTTP(connObj *connPtr)$/;"	f
+setConnObjHTTPS	connObj.c	/^void setConnObjHTTPS(connObj *connPtr, SSL_CTX *ctx)$/;"	f
+setRequestError	httpParser.c	/^void setRequestError(requestObj *req, enum StatusCode code)$/;"	f
+shutdownEngine	selectEngine.c	/^static int shutdownEngine;$/;"	v	file:
+signalExitEngine	selectEngine.c	/^void signalExitEngine()$/;"	f
+signalRestartEngine	selectEngine.c	/^void signalRestartEngine()$/;"	f
+signal_handler	daemonize.c	/^void signal_handler(int sig)$/;"	f
+size	linkedList.h	/^    int size;$/;"	m	struct:DLL
+socket	socketContainer.h	/^    int socket;$/;"	m	struct:connObj
+startEngine	selectEngine.c	/^int startEngine(selectEngine *engine)$/;"	f
+statusCode	httpParser.h	/^    int statusCode;$/;"	m	struct:requestObj
+statusLine	httpResponder.h	/^    char *statusLine;$/;"	m	struct:responseObj
+strLower	commom.c	/^void strLower(char *str)$/;"	f
+strLower	common.c	/^void strLower(char *str)$/;"	f
+strTrim	common.c	/^char *strTrim(char *str){$/;"	f
+toClose	httpResponder.c	/^int toClose(responseObj *res)$/;"	f
+type	fileIO.h	/^   enum MIMEType type;$/;"	m	struct:fileMetadata	typeref:enum:fileMetadata::MIMEType
+uri	httpParser.h	/^    char *uri;$/;"	m	struct:requestObj
+value	httpHeader.h	/^    char *value;$/;"	m	struct:headerEntry
+version	httpParser.h	/^    int version;$/;"	m	struct:requestObj
+wbStatus	connObj.h	/^    enum writeStatus wbStatus;$/;"	m	struct:connObj	typeref:enum:connObj::writeStatus
+writeBuffer	connObj.h	/^    char *writeBuffer;$/;"	m	struct:connObj
+writeConnHandler	selectEngine.h	/^    void (*writeConnHandler)(connObj *);$/;"	m	struct:selectEngine
+writeConnectionHandler	connHandler.c	/^void writeConnectionHandler(connObj *connPtr)$/;"	f
+writeConnectionHandler	httpHandler.c	/^void writeConnectionHandler(connObj *connPtr)$/;"	f
+writeResponse	httpResponder.c	/^int writeResponse(responseObj *res, char *buf, ssize_t maxSize, ssize_t *retSize)$/;"	f
+writeStatus	connObj.h	/^enum writeStatus {$/;"	g
+writingRes	connObj.h	/^    writingRes,$/;"	e	enum:writeStatus
