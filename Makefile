@@ -8,8 +8,10 @@
 
 default:
 	cd liso; make
-
+	cd route; make
 clean:
 	rm -f lisod
+	rm -f routed
 	rm liso/*.o
+	rm route/*.o
 
