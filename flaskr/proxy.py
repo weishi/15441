@@ -7,26 +7,41 @@
 #          Charles Rang <rang@cs.cmu.edu>,
 #          Wolfgang Richter <wolf@cs.cmu.edu>
 
-import os, sys
+import os, sys, socket
 
 # From Flask: http://flask.pocoo.org/docs/quickstart/
 ############### BEGIN FLASK QUICKSTART ##############
 from flask import Flask
 
+StaticDir='/tmp/static'
+Host='localhost'
 app = Flask(__name__)
 
 @app.route('/')
 def hello_world():
     return 'Hello World!'
 
-@app.route('/rd/<int:port>')
+@app.route('/rd/<int:port>/<obj>', method=['GET'])
 def getFile():
+    msg='GETRD '+obj
+    response=sendReq(port,msg)
     return 'Get file not implemented'
 
-@app.route('/rd/addfile/<int:port>')
+@app.route('/rd/addfile/<int:port>', method = ['POST'])
 def addFile
     return 'Add file not implemented'
 
+def sendReq(port,msg):
+    s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((Host, Port))
+    s.send(msg)
+    response=[]
+    while True:
+        chunk=s.recv(1024)
+        if not chunk:
+            break
+        response.append(chunk)
+    return ''.join(response)
 
 
 ################ END FLASK QUICKSTART ###############
