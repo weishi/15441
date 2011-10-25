@@ -14,20 +14,20 @@ CFLAGS=-Wall -Werror -Wextra -Wshadow -Wunreachable-code -O2 -D_FORTIFY_SOURCE=2
 SOURCE=src
 VPATH=$(SOURCE)
 OBJECTS = routed.o
-OBJECTS += linkedList.o
-OBJECTS += fileIO.o
-OBJECTS += common.o
-OBJECTS += daemonize.o
+OBJECTS += routingEngine.o
+OBJECTS += routingTable.o
+OBJECTS += resourceTable.o
 
 
 default: routed
 
-lisod: $(OBJECTS)
+routed: $(OBJECTS)
 	$(CC) $(CFLAGS) -o ../routed $(LFLAGS) $(OBJECTS)
 
 $(SOURCE)/%.o: %.c
 	$(build-cmd)
 
 clean:
+	rm ../routed
 	rm ./*.o
 

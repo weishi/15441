@@ -37,6 +37,6 @@ $(SOURCE)/%.o: %.c
 	$(build-cmd)
 
 clean:
-	rm -f lisod
+	rm -f ../lisod
 	rm ./*.o
 
