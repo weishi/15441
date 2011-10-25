@@ -7,13 +7,14 @@
 #          Charles Rang <rang@cs.cmu.edu>,
 #          Wolfgang Richter <wolf@cs.cmu.edu>
 
-import os, sys, socket
+import os, sys, socket, hashlib
 
 # From Flask: http://flask.pocoo.org/docs/quickstart/
 ############### BEGIN FLASK QUICKSTART ##############
-from flask import Flask
+from flask import Flask, request
 
-StaticDir='/tmp/static'
+RootDir='/tmp'
+VDir='/static'
 Host='localhost'
 app = Flask(__name__)
 
@@ -25,11 +26,22 @@ def hello_world():
 def getFile():
     msg='GETRD '+obj
     response=sendReq(port,msg)
-    return 'Get file not implemented'
+    if response.startswith('OK '):
+        page=urllib.urlopen(response[3:])
+        data=page.read()
+        page.close()
+        return response[3:]
+    else:
+        return 'Error'
 
-@app.route('/rd/addfile/<int:port>', method = ['POST'])
+@app.route('/rd/addfile/<int:port>/<obj>', method = ['POST'])
 def addFile
-    return 'Add file not implemented'
+    f=request.files['uploadFile']
+    filename=hashlib.sha256(f).hexdigest()
+    f.save(RootDir + VDir+'/'+filename)
+    msg='ADDFILE '+ obj + ' ' + VDir + '/' + filename
+    response=sendReq(port,msg)
+    return response
 
 def sendReq(port,msg):
     s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
