@@ -1,6 +1,6 @@
 #
 # Makefile for Project 2
-# CCN
+# CCN Distributed HTTP
 #
 # Wei Shi <weishi@andrew.cmu.edu>
 # Han Liu <hanl1@andrew.cmu.edu>
