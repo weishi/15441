@@ -17,6 +17,7 @@ OBJECTS = routed.o
 OBJECTS += routingEngine.o
 OBJECTS += routingTable.o
 OBJECTS += resourceTable.o
+OBJECTS += linkedList.o
 
 
 default: routed
