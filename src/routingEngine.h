@@ -8,6 +8,7 @@
 
 #include "routingTable.h"
 #include "resourceTable.h"
+#include "linkedList.h"
 
 typedef struct routingEngine {
     routingTable *tRou;
@@ -32,5 +33,13 @@ void initRouter(routingEngine *router,
 int startRouter(routingEngine *);
 
 /* Private methods */
+void exitRouter(routingEngine *, DLL*);
+int listenSocket(routingEngine *, int, int);
+int openSocket(int);
+int closeSocket(int);
+void signalExitRouter();
+void signalRestartRouter();
 
+void createPool(DLL *, fd_set *, fd_set *, int *);
+void handlePool(DLL *, fd_set *, fd_set *, routingEngine *);
 #endif
