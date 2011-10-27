@@ -6,16 +6,10 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
-#include <fcntl.h>
 
-#include "sslLib.h"
-#include "httpResponder.h"
-
-enum writeStatus {
-    initRes,
-    writingRes,
-    lastRes,
-    doneRes,
+enum connType {
+    TCP,
+    UDP
 };
 
 
@@ -30,6 +24,7 @@ typedef struct connObj {
     int isWrite;
     char *readBuffer;
     char *writeBuffer;
+    enum connType type;
 } connObj;
 
 

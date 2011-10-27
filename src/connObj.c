@@ -8,21 +8,9 @@ int compareConnObj(void *data1, void *data2)
 void freeConnObj(void *data)
 {
     connObj *connPtr = data;
-    if(isHTTPS(connPtr)) {
-        SSL_shutdown(connPtr->connSSL);
-        SSL_free(connPtr->connSSL);
-    }
     close(connPtr->connFd);
-    free(connPtr->clientAddr);
     free(connPtr->readBuffer);
     free(connPtr->writeBuffer);
-    freeRequestObj(connPtr->req);
-    connPtr->req = NULL;
-    freeResponseObj(connPtr->res);
-    connPtr->res = NULL;
-    if(connPtr->CGIout > 0) {
-        close(connPtr->CGIout);
-    }
     free(connPtr);
 }
 
@@ -33,37 +21,20 @@ int mapConnObj(void *data)
 
 
 connObj *createConnObj(int connFd,
-                       ssize_t bufferSize,
-                       int port,
-                       char *addr,
-                       enum HTTPType connType )
+                       ssize_t bufferSize,enum connType type)
 {
     connObj *newObj = malloc(sizeof(connObj));
     newObj->connFd = connFd;
-    newObj->serverPort = port;
-    newObj->clientAddr = NULL;
-    if(addr != NULL) {
-        char *buf = malloc(strlen(addr) + 1);
-        strcpy(buf, addr);
-        newObj->clientAddr = buf;
-    }
-    newObj->connType = connType;
-    newObj->acceptedSSL = 0;
+    newObj->type = type;
     newObj->curReadSize = 0;
     newObj->maxReadSize = bufferSize;
     newObj->curWriteSize = 0;
     newObj->maxWriteSize = bufferSize;
     newObj->isOpen = 1;
-    newObj->wbStatus = initRes;
     newObj->readBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
     newObj->writeBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
-
-    newObj->req = createRequestObj(newObj->serverPort,
-                                   newObj->clientAddr,
-                                   (newObj->connType == T_HTTPS) ? 1 : 0 );
-    newObj->res = NULL;
-
-    newObj->CGIout = -1;
+    newObj->isRead=1;
+    newObj->isWrite=1;
     return newObj;
 }
 
@@ -140,65 +111,16 @@ int isFullConnObj(connObj *connPtr)
 
 int isEmptyConnObj(connObj *connPtr)
 {
-    switch(connPtr->wbStatus) {
-    case initRes:
         return connPtr->curWriteSize == 0;
-    case writingRes:
-    case lastRes:
-        return 0;
-    case doneRes:
-        return 1;
-    default:
-        return -1;
-    }
 }
 
-int isNewConnObj(connObj *connPtr)
+int isRead(connObj *connPtr)
 {
-    return connPtr->curReadSize > 0;
+    return connPtr->isRead == 1;
 }
 
-void setConnObjHTTP(connObj *connPtr)
+int isWrite(connObj *connPtr)
 {
-    connPtr->connSSL = NULL;
+    return connPtr->isWrite == 1;
 }
 
-void setConnObjHTTPS(connObj *connPtr, SSL_CTX *ctx)
-{
-    /* Set non-blocking */
-    int flag = fcntl(connPtr->connFd, F_GETFL, 0);
-    flag = flag | O_NONBLOCK;
-    fcntl(connPtr->connFd, F_SETFL, flag);
-    /* Init SSL connection */
-    SSL *sslPtr = SSL_new(ctx);
-    SSL_set_fd(sslPtr, connPtr->connFd);
-    connPtr->connSSL = sslPtr;
-}
-
-int isHTTP(connObj *connPtr)
-{
-    return connPtr->connType == T_HTTP;
-}
-
-int isHTTPS(connObj *connPtr)
-{
-    return connPtr->connType == T_HTTPS;
-}
-
-int hasAcceptedSSL(connObj *connPtr)
-{
-    return connPtr->acceptedSSL == 1;
-}
-
-void setAcceptedSSL(connObj *connPtr)
-{
-    connPtr->acceptedSSL = 1;
-}
-
-
-void cleanConnObjCGI(connObj *connPtr)
-{
-    close(connPtr->CGIout);
-    connPtr->CGIout = -1;
-    connPtr->wbStatus = lastRes;
-};
