@@ -18,13 +18,13 @@ void freeRoutingEntry(void *data)
 
 /* Routing Table */
 
-int initRoutingTable(routingTable *tRouting, char *rouFile)
+int initRoutingTable(routingTable *tRouting, int nodeID, char *rouFile, char *resFile)
 {
     initList(tRouting->table, compareRoutingEntry, freeRoutingEntry, NULL);
-    return loadRoutingTable(tRouting, rouFile);
+    return loadRoutingTable(tRouting, nodeID, rouFile, resFile);
 }
 
-int loadRoutingTable(routingTable *tRouting, char *rouFile)
+int loadRoutingTable(routingTable *tRouting, int nodeID, char *rouFile, char *resFile)
 {
     FILE *fp;
     char *line;
@@ -36,6 +36,10 @@ int loadRoutingTable(routingTable *tRouting, char *rouFile)
     }
     while(getline(&line, &len, fp) != 1) {
         routingEntry *re = parseRoutingLine(line);
+        if(re->nodeID==nodeID){
+            re->isMe=1;
+            initResourceTable(re->tRes, resFile);
+        }
         insertNode(tRouting->table, re);
     }
 
@@ -66,10 +70,12 @@ routingEntry *parseRoutingLine(char *line)
     }
     newObj = malloc(sizeof(routingEntry));
     newObj->nodeID = nodeID;
+    newObj->isMe = 0;
     newObj->host = host;
     newObj->routingPort = routingPort;
     newObj->localPort = localPort;
     newObj->serverPort = serverPort;
+    newObj->tRes=malloc(sizeof(resourceTable));
     return newObj;
 }
 

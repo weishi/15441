@@ -12,10 +12,12 @@
 
 typedef struct routingEntry {
     unsigned int nodeID;
+    int isMe;
     char *host;
     int routingPort;
     int localPort;
     int serverPort;
+    resourceTable *tRes;
 } routingEntry;
 
 int compareRoutingEntry(void *, void *);
@@ -27,7 +29,9 @@ typedef struct routingTable {
     DLL *table;
 } routingTable;
 
-int initRoutingTable(routingTable *, char *);
+int initRoutingTable(routingTable *, int nodeID, char *rouFile, char *resFile);
+
+void getResourcePath(char*, char*, int*, char*);
 
 /* Private methods */
 int loadRoutingTable(routingTable *, char *);

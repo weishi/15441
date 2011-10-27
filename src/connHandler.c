@@ -7,7 +7,7 @@ int newConnectionHandler(connObj *connPtr, char **addr)
     int listenFd = getConnObjSocket(connPtr);
     int newFd = accept(listenFd, (struct sockaddr *)&clientAddr, &clientLength);
     if(newFd == -1) {
-        logger(LogProd, "Error accepting socket.\n");
+        printf("Error accepting socket.\n");
         return -1;
     } else {
         *addr = inet_ntoa(clientAddr.sin_addr);
@@ -17,45 +17,29 @@ int newConnectionHandler(connObj *connPtr, char **addr)
 
 void processConnectionHandler(connObj *connPtr)
 {
-    char *buf;
-    ssize_t size, retSize;
-    int done, full;
+    char *readBuf, *writeBuf;
+    ssize_t rSize, wSize;
+    int full, retVal;
     if(connPtr->isOpen == 0) {
         printf("Skip connection set to close\n");
         return;
     }
-    getConnObjReadBufferForRead(connPtr, &buf, &size);
-    full = isFullConnObj(connPtr);
-    switch(httpParse(connPtr->req, buf, &size, full)) {
-    case Parsing:
-        removeConnObjReadSize(connPtr, size);
+    switch(getConnObjType(connPtr)) {
+    case TCP:
+        getConnObjReadBufferForRead(connPtr, &readBuf, &rSize);
+        getConnObjWriteBufferForWrite(connPtr, &writeBuf, &wSize);
+        full = isFullConnObj(connPtr);
+        retVal = flaskParse(readBuf, rSize, writeBuf, &wSize, full);
+        if(retVal == -1) {
+            setCloseConnObj(connPtr);
+        } else if(retVal == 0) {
+            //Wait for next round.
+        } else {
+            addConnObjWriteSize(wSize);
+            setIsWriteConnObj(connPtr);
+        }
         break;
-    case ParseError:
-    case Parsed:
-        removeConnObjReadSize(connPtr, size);
-        if(connPtr->res == NULL) {
-            printf("Create new response\n");
-            connPtr->res = createResponseObj();
-            buildResponseObj(connPtr->res, connPtr->req);
-            if(isCGIResponse(connPtr->res)) {
-                connPtr->CGIout = connPtr->res->CGIout;
-            }
-        }
-        if(!isCGIResponse(connPtr->res)) {
-            /* Dump HTTP response to buffer */
-            printf("Dump response to buffer\n");
-            getConnObjWriteBufferForWrite(connPtr, &buf, &size);
-            printf("Write buffer has %d bytes free\n", size);
-            done = writeResponse(connPtr->res, buf, size, &retSize);
-            printf("%d bytes dumped, done? %d\n", retSize, done);
-            addConnObjWriteSize(connPtr, retSize);
-            connPtr->wbStatus = writingRes;
-            if(done) {
-                printf("All dumped\n");
-                connPtr->wbStatus = lastRes;
-            }
-        }
-        printf("Return from httpParse\n");
+    case UDP:
         break;
     default:
         break;
@@ -85,9 +69,9 @@ void readConnectionHandler(connObj *connPtr)
             retSize = -1 ;
         }
         if (retSize == -1) {
-            logger(LogProd, "Error reading from client.\n");
+            printf("Error reading from client.\n");
             if(errno == EINTR) {
-                logger(LogProd, "RECV EINTR. Try later again.\n");
+                printf("RECV EINTR. Try later again.\n");
                 return;
             }
             setConnObjClose(connPtr);
@@ -111,10 +95,6 @@ void writeConnectionHandler(connObj *connPtr)
     int connFd = getConnObjSocket(connPtr);
     getConnObjWriteBufferForRead(connPtr, &buf, &size);
     printf("Ready to write %d bytes...", size);
-    if(size <= 0) {
-        prepareNewConn(connPtr);
-        return;
-    }
     switch(getConnObjType(connPtr)) {
     case TCP:
         printf("Sending to Flask");
@@ -126,16 +106,21 @@ void writeConnectionHandler(connObj *connPtr)
     default:
         retSize = -1;
     }
-    if(retSize == -1 && errno == EINTR) {
-        return ;
-    }
-    if (retSize != size) {
-        logger(LogProd, "Error sending to client.\n");
-        setConnObjClose(connPtr);
+    if(retSize == -1) {
+        if(errno == EINTR) {
+            printf("RECV EINTR. Try later again.\n");
+            return;
+        } else {
+            printf("Error sending to client. Close connection.\n");
+            setConnObjClose(connPtr);
+        }
+    } else if(retSize != size) {
+        printf("Sending to client with short count.\n");
+        removeConnObjWriteSize(connPtr, retSize);
     } else {
-        printf("Done\n");
+        printf("WriteBuf cleared. Close connection.\n");
         removeConnObjWriteSize(connPtr, size);
+        setConnObjClose(connPtr);
     }
-
 }
 
