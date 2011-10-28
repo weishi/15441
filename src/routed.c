@@ -17,8 +17,6 @@ int main(int argc, char *argv[])
     int neighborTimeout;
     int retranTimeout;
     int LSATimeout;
-    resourceTable tResource;
-    routingTable tRouting;
     routingEngine engine;
     if(argc != 8) {
         printf(USAGE, argv[0]);
@@ -44,18 +42,11 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
     */
-    if(initResourceTable(&tResource, resFile) == -1) {
-        printf("Error reading file list.\n");
-        return EXIT_FAILURE;
-    }
-
-    if(initRoutingTable(&tRouting, configFile) == -1) {
+    if(initRoutingTable(nodeID, configFile, resFile) == -1) {
         printf("Error reading router config file.\n");
         return EXIT_FAILURE;
     }
     initRouter(&engine,
-               &tRouting,
-               &tResource,
                nodeID,
                cycleTime,
                neighborTimeout,

@@ -31,15 +31,13 @@ int flaskParse(char *readBuf, ssize_t rSize, char *writeBuf, ssize_t *wSize, int
 
 int flaskGETResponse(char *objName, char *writeBuf, ssize_t *wSize)
 {
-    char *resPath = NULL;
-    char *resHost = NULL;
-    int *resPort = 0;
-    getResourcePath(objName, &resHost, &resPort, &resPath);
+    routingInfo rInfo;
+    getResourcePath(objName, &rInfo);
     if(resHost == NULL) {
         return -1;
     } else {
-        int retSize = snprintf(writeBuf, wSize,
-                               "OK http://%s:%d%s", resHost, resPort, resPath);
+        int retSize = snprintf(writeBuf, wSize, "OK http://%s:%d%s",
+                rInfo.host, rInfo.port, rInfo.path);
         if(retSize < wSize) {
             *wSize=retSize;
             return 1; //Write succeed.

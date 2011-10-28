@@ -22,7 +22,11 @@ void freeResourceEntry(void *data)
 int initResourceTable(resourceTable *tRes, char *resFile)
 {
     initList(tRes->table, compareResourceEntry, freeResourceEntry, NULL);
-    return loadResourceTable(tRes, resFile);
+    if(resFile == NULL) {
+        return 0;
+    } else {
+        return loadResourceTable(tRes, resFile);
+    }
 }
 
 int loadResourceTable(resourceTable *tRes, char *resFile)
@@ -68,5 +72,16 @@ resourceEntry *parseResourceLine(char *line)
     return newObj;
 }
 
-
+char *getPathByName(resourceTable *tRes, char *objName)
+{
+    resourceEntry target;
+    target.name = objName;
+    Node *ref = searchList(tRes->table, &target);
+    if(ref == NULL) {
+        return NULL;
+    } else {
+        resourceEntry *ret = (resourceEntry *)(ref->data);
+        return ret->path;
+    }
+}
 

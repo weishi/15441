@@ -18,8 +18,9 @@ void freeRoutingEntry(void *data)
 
 /* Routing Table */
 
-int initRoutingTable(routingTable *tRouting, int nodeID, char *rouFile, char *resFile)
+int initRoutingTable(int nodeID, char *rouFile, char *resFile)
 {
+    tRouting = malloc(sizeof(routingTable));
     initList(tRouting->table, compareRoutingEntry, freeRoutingEntry, NULL);
     return loadRoutingTable(tRouting, nodeID, rouFile, resFile);
 }
@@ -36,9 +37,10 @@ int loadRoutingTable(routingTable *tRouting, int nodeID, char *rouFile, char *re
     }
     while(getline(&line, &len, fp) != 1) {
         routingEntry *re = parseRoutingLine(line);
-        if(re->nodeID==nodeID){
-            re->isMe=1;
+        if(re->nodeID == nodeID) {
+            re->isMe = 1;
             initResourceTable(re->tRes, resFile);
+            rRouting->me = re;
         }
         insertNode(tRouting->table, re);
     }
@@ -75,9 +77,31 @@ routingEntry *parseRoutingLine(char *line)
     newObj->routingPort = routingPort;
     newObj->localPort = localPort;
     newObj->serverPort = serverPort;
-    newObj->tRes=malloc(sizeof(resourceTable));
+    newObj->tRes = malloc(sizeof(resourceTable));
     return newObj;
 }
 
 
+int getResource(char *objName, routingInfo *rInfo)
+{
+    routingTable *tRou = tRouting;
+    int i = 0;
+    int minDistance = INT_MAX;
+    char *path;
+    int found = 0;
+    for(i = 0; i < tRou->table->size; i++) {
+        routingEntry *entry = getNodeDataAt(tRou->table);
+        path = getPathByName(entry->tRes, objName);
+        if(path != NULL) {
+            found = 1;
+            if(minDistance > entry->distance) {
+                rInfo->host = entry->host;
+                rInfo->port = entry->serverPort;
+                rInfo->path = path;
+                minDistance = entry->distance;
+            }
+        }
+    }
+    return found;
+}
 
