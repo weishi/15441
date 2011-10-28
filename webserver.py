@@ -57,10 +57,7 @@ def getFile(port,obj):
     msg='GETRD '+obj
     response=sendReq(port,msg)
     if response.startswith('OK '):
-        page=urllib.urlopen(response[3:])
-        data=page.read()
-        page.close()
-        return response[3:]
+        return send_file(rllib.urlopen(response[3:]))
     else:
         return 'Error'
 
