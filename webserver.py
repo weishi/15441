@@ -63,9 +63,19 @@ def getFile(port,obj):
         return response[3:]
     else:
         return 'Error'
-
-
-if __name__ == '__main__':
+def sendReq(port, msg):
+	s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.connect((Host, Port))
+	s.send(msg)
+	response=[]
+	while True:
+		chunk=s.recv(1024)
+		if not chunk:
+			break
+		response.append(chunk)
+		return ''.join(response)
+	
+	if __name__ == '__main__':
 	if (len(sys.argv) > 1):
 		servport = int(sys.argv[1])
 		app.run(host='0.0.0.0', port=servport, threaded=True, processes=1)
