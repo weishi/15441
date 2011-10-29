@@ -85,3 +85,10 @@ char *getPathByName(resourceTable *tRes, char *objName)
     }
 }
 
+void insertResource(resourceTable *tRes,char *objName, char *objPath){
+    resourceEntry *newObj=malloc(sizeof(resourceEntry));
+    newObj->name=objName;
+    newObj->path=objPath;
+    insertNode(tRes->table, newObj);
+    return;
+}

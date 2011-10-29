@@ -25,7 +25,7 @@ int initRoutingTable(int nodeID, char *rouFile, char *resFile)
     return loadRoutingTable(tRouting, nodeID, rouFile, resFile);
 }
 
-int loadRoutingTable(routingTable *tRouting, int nodeID, char *rouFile, char *resFile)
+int loadRoutingTable(routingTable *tRou, unsigned int nodeID, char *rouFile, char *resFile)
 {
     FILE *fp;
     char *line;
@@ -40,9 +40,8 @@ int loadRoutingTable(routingTable *tRouting, int nodeID, char *rouFile, char *re
         if(re->nodeID == nodeID) {
             re->isMe = 1;
             initResourceTable(re->tRes, resFile);
-            rRouting->me = re;
         }
-        insertNode(tRouting->table, re);
+        insertNode(tRou->table, re);
     }
 
     if(line != NULL) {
@@ -82,7 +81,7 @@ routingEntry *parseRoutingLine(char *line)
 }
 
 
-int getResource(char *objName, routingInfo *rInfo)
+int getRoutingInfo(char *objName, routingInfo *rInfo)
 {
     routingTable *tRou = tRouting;
     int i = 0;
@@ -90,7 +89,7 @@ int getResource(char *objName, routingInfo *rInfo)
     char *path;
     int found = 0;
     for(i = 0; i < tRou->table->size; i++) {
-        routingEntry *entry = getNodeDataAt(tRou->table);
+        routingEntry *entry = getNodeDataAt(tRou->table,i);
         path = getPathByName(entry->tRes, objName);
         if(path != NULL) {
             found = 1;
@@ -105,3 +104,53 @@ int getResource(char *objName, routingInfo *rInfo)
     return found;
 }
 
+routingEntry *getRoutingEntry(unsigned int nodeID)
+{
+    routingTable *tRou = tRouting;
+    int i = 0;
+    for(i = 0; i < tRou->table->size; i++) {
+        routingEntry *entry = getNodeDataAt(tRou->table,i);
+        if(entry->nodeID == nodeID) {
+            return entry;
+        }
+    }
+    return NULL;
+}
+
+routingEntry *getMyRoutingEntry()
+{
+    routingTable *tRou = tRouting;
+    int i = 0;
+    for(i = 0; i < tRou->table->size; i++) {
+        routingEntry *entry = getNodeDataAt(tRou->table,i);
+        if(entry->isMe) {
+            return entry;
+        }
+    }
+    return NULL;
+}
+
+int getRoutingPort(unsigned int nodeID)
+{
+    routingEntry *entry = getRoutingEntry(nodeID);
+    if(entry == NULL) {
+        return -1;
+    } else {
+        return entry->routingPort;
+    }
+}
+
+int getLocalPort(unsigned int nodeID)
+{
+    routingEntry *entry = getRoutingEntry(nodeID);
+    if(entry == NULL) {
+        return -1;
+    } else {
+        return entry->localPort;
+    }
+}
+
+void insertLocalResource(char *objName, char *objPath){
+    routingEntry *entry=getMyRoutingEntry();
+    insertResource(entry->tRes, objName, objPath);
+}

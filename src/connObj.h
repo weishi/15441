@@ -34,7 +34,7 @@ void freeConnObj(void *data);
 int mapConnObj(void *data);
 
 /* Constructor */
-connObj *createConnObj(int, ssize_t, char *);
+connObj *createConnObj(int, ssize_t, enum connType);
 
 /* Getters and Setters */
 int getConnObjSocket(connObj *);
@@ -49,10 +49,13 @@ void removeConnObjReadSize(connObj *, ssize_t);
 void addConnObjWriteSize(connObj *, ssize_t);
 void removeConnObjWriteSize(connObj *, ssize_t);
 
-int isRead(connObj *);
-int isWrite(connObj *);
+int isReadConnObj(connObj *);
+int isWriteConnObj(connObj *);
 
 int isFullConnObj(connObj *);
 int isEmptyConnObj(connObj *);
 
+enum connType getConnObjType(connObj *);
+
+void setConnObjIsWrite(connObj *);
 #endif

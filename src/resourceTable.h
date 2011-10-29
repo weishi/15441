@@ -26,6 +26,7 @@ typedef struct resourceTable {
 
 int initResourceTable(resourceTable *, char *);
 char *getPathByName(resourceTable *, char *);
+void insertResource(resourceTable *, char *, char *);
 
 /* Private methods */
 int loadResourceTable(resourceTable *, char *);

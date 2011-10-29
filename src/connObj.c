@@ -114,13 +114,21 @@ int isEmptyConnObj(connObj *connPtr)
         return connPtr->curWriteSize == 0;
 }
 
-int isRead(connObj *connPtr)
+int isReadConnObj(connObj *connPtr)
 {
     return connPtr->isRead == 1;
 }
 
-int isWrite(connObj *connPtr)
+int isWriteConnObj(connObj *connPtr)
 {
     return connPtr->isWrite == 1;
 }
 
+enum connType getConnObjType(connObj *connPtr){
+    return connPtr->type;
+}
+
+void setConnObjIsWrite(connObj *connPtr){
+    connPtr->isWrite=1;
+    connPtr->isRead=0;
+}

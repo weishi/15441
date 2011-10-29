@@ -31,12 +31,12 @@ void processConnectionHandler(connObj *connPtr)
         full = isFullConnObj(connPtr);
         retVal = flaskParse(readBuf, rSize, writeBuf, &wSize, full);
         if(retVal == -1) {
-            setCloseConnObj(connPtr);
+            setConnObjClose(connPtr);
         } else if(retVal == 0) {
             //Wait for next round.
         } else {
-            addConnObjWriteSize(wSize);
-            setIsWriteConnObj(connPtr);
+            addConnObjWriteSize(connPtr, wSize);
+            setConnObjIsWrite(connPtr);
         }
         break;
     case UDP:
@@ -81,7 +81,7 @@ void readConnectionHandler(connObj *connPtr)
             setConnObjClose(connPtr);
             return;
         } else {
-            printf("Read %d bytes\n", retSize);
+            printf("Read %zu bytes\n", retSize);
             addConnObjReadSize(connPtr, retSize);
         }
     }
@@ -94,7 +94,7 @@ void writeConnectionHandler(connObj *connPtr)
     ssize_t size, retSize;
     int connFd = getConnObjSocket(connPtr);
     getConnObjWriteBufferForRead(connPtr, &buf, &size);
-    printf("Ready to write %d bytes...", size);
+    printf("Ready to write %zu bytes...", size);
     switch(getConnObjType(connPtr)) {
     case TCP:
         printf("Sending to Flask");

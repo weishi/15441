@@ -8,13 +8,13 @@ int flaskParse(char *readBuf, ssize_t rSize, char *writeBuf, ssize_t *wSize, int
     char *tmpBuf = calloc(rSize + 1, 1);
     memcpy(tmpBuf, readBuf, rSize);
     
-    numMatch = sscanf(tmpBuf, "GETRD %ms", objName);
+    numMatch = sscanf(tmpBuf, "GETRD %ms", &objName);
     if(numMatch == 1) {
         free(tmpBuf);
         return flaskGETResponse(objName, writeBuf, wSize);
     }
     
-    numMatch = sscanf(tmpBuf, "ADDFILE %ms %ms", objName, objPath);
+    numMatch = sscanf(tmpBuf, "ADDFILE %ms %ms", &objName, &objPath);
     if(numMatch == 2) {
         free(tmpBuf);
         return flaskADDResponse(objName, objPath, writeBuf, wSize);
@@ -32,13 +32,13 @@ int flaskParse(char *readBuf, ssize_t rSize, char *writeBuf, ssize_t *wSize, int
 int flaskGETResponse(char *objName, char *writeBuf, ssize_t *wSize)
 {
     routingInfo rInfo;
-    getResourcePath(objName, &rInfo);
-    if(resHost == NULL) {
+    int found=getRoutingInfo(objName, &rInfo);
+    if(!found) {
         return -1;
     } else {
-        int retSize = snprintf(writeBuf, wSize, "OK http://%s:%d%s",
+        int retSize = snprintf(writeBuf, *wSize, "OK http://%s:%d%s",
                 rInfo.host, rInfo.port, rInfo.path);
-        if(retSize < wSize) {
+        if(retSize < *wSize) {
             *wSize=retSize;
             return 1; //Write succeed.
         } else {
@@ -50,9 +50,9 @@ int flaskGETResponse(char *objName, char *writeBuf, ssize_t *wSize)
 
 int flaskADDResponse(char *objName, char *objPath, char *writeBuf, ssize_t *wSize)
 {
-    int retVal = insertLocalResource(objName, objPath);
-    int retSize = snprintf(writeBuf, wSize, "OK");
-    if(retSize < wSize) {
+    insertLocalResource(objName, objPath);
+    int retSize = snprintf(writeBuf, *wSize, "OK");
+    if(retSize < *wSize) {
         *wSize=retSize;
         return 1; //Write succeed.
     } else {

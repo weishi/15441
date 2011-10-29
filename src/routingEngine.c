@@ -3,28 +3,28 @@
 static int shutdownRouter;
 
 void initRouter(routingEngine *router,
-                routingTable *tRouting,
-                resourceTable *tResource,
                 int nodeID,
                 int cycleTime,
                 int neighborTimeout,
                 int retranTimeout,
                 int LSATimeout)
 {
-    router->tRou = tRouting;
-    router->tRes = tResource;
     router->nodeID = nodeID;
     router->cycleTime = cycleTime;
     router->neighborTimeout = neighborTimeout;
     router->retranTimeout = retranTimeout;
     router->LSATimeout = LSATimeout;
+    router->newConnHandler = newConnectionHandler;
+    router->readConnHandler = readConnectionHandler;
+    router->processConnHandler = processConnectionHandler;
+    router->writeConnHandler = writeConnectionHandler;
 
 }
 
 int startRouter(routingEngine *engine)
 {
-    int routingPort = getRoutingPort(engine->tRou, engine->nodeID);
-    int localPort = getLocalPort(engine->tRou, engine->nodeID);
+    int routingPort = getRoutingPort(engine->nodeID);
+    int localPort = getLocalPort(engine->nodeID);
     int routingFD = openSocket(routingPort, "UDP");
     int localFD = openSocket(localPort, "TCP");
     if(routingFD < 0 || localFD < 0) {
@@ -38,6 +38,7 @@ void exitRouter(routingEngine *engine, DLL *connList)
     int i = 0;
     int size = connList->size;
     connObj *connPtr;
+    engine=engine;
     for(i = 0; i < size; i++) {
         connPtr = getNodeDataAt(connList, i);
         setConnObjClose(connPtr);
@@ -64,13 +65,13 @@ int listenSocket(routingEngine *engine, int routingFD, int localFD)
 
     fd_set readPool, writePool;
     initList(&socketList, compareConnObj, freeConnObj, mapConnObj);
-    insertNode(&socketList, createConnObj(localFD, 0, NULL));
-    insertNode(&socketList, createConnObj(routingFD, 0, NULL));
+    insertNode(&socketList, createConnObj(localFD, 0, TCP));
+    insertNode(&socketList, createConnObj(routingFD, 0, TCP));
     while(1) {
         if(shutdownRouter != 0) {
             int retVal = shutdownRouter;
             shutdownRouter = 0;
-            exitEngine(engine, &socketList);
+            exitRouter(engine, &socketList);
             return retVal;
         }
         createPool(&socketList, &readPool, &writePool, &maxSocket);
@@ -120,8 +121,7 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, routingEngine *e
             int status = engine->newConnHandler(connPtr, &addr);
             if(status > 0) {
                 printf( "New HTTP connection accpted\n");
-                connPtr = createConnObj(status, BUF_SIZE, NULL);
-                setConnObjHTTP(connPtr);
+                connPtr = createConnObj(status, BUF_SIZE, UDP);
                 insertNode(list, connPtr);
             } else {
                 printf("cannot accept new HTTP Connection\n");
@@ -188,10 +188,10 @@ int openSocket(int port, char *typeStr)
     int optval = 1;
     struct sockaddr_in addr;
     int type;
-    if(strcmp(type, "TCP") == 0) {
+    if(strcmp(typeStr, "TCP") == 0) {
         type = SOCK_STREAM;
     } else {
-        type = SCOK_DGRAM;
+        type = SOCK_DGRAM;
     }
     if ((sock = socket(PF_INET, type, 0)) == -1) {
         printf("Failed creating socket.\n");

@@ -17,6 +17,9 @@ OBJECTS = routed.o
 OBJECTS += routingEngine.o
 OBJECTS += routingTable.o
 OBJECTS += resourceTable.o
+OBJECTS += connHandler.o
+OBJECTS += connObj.o
+OBJECTS += flaskParser.o
 OBJECTS += linkedList.o
 
 

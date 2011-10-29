@@ -10,6 +10,7 @@
 #include <errno.h>
 
 #include "connObj.h"
+#include "flaskParser.h"
 
 #define BUF_SIZE 8192 
 
