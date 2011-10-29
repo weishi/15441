@@ -14,7 +14,7 @@ import shutil
 app = Flask(__name__)
 UPLOAD_FOLDER = './static/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-Host = 'localhost'
+Host = 'unix14.andrew.cmu.edu'
 
 @app.route('/')
 def index():
@@ -59,10 +59,10 @@ def saveFile(fileHandle):
 
 def getFile(port,obj):
 	msg='GETRD '+obj
+	print obj
 	response=sendReq(port,msg)
 	if response.startswith('OK '):
-		return send_file(urllib.urlopen(response[3:]), as_attachment=True,
-				 attachment_filename='wolf.png')
+		return send_file(urllib.urlopen(response[3:]))
 	else:
 		return 'Error'
 def sendReq(port, msg):
