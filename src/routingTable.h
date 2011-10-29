@@ -5,8 +5,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include "linkedList.h"
+#include "resourceTable.h"
+
+
+typedef struct routingInfo {
+    const char *host;
+    int port;
+    const char *path;
+} routingInfo;
 
 /* Routing Entry for DLL */
 
@@ -18,6 +27,7 @@ typedef struct routingEntry {
     int localPort;
     int serverPort;
     resourceTable *tRes;
+    int distance;
 } routingEntry;
 
 int compareRoutingEntry(void *, void *);
@@ -25,15 +35,24 @@ void freeRoutingEntry(void *);
 
 /* Routing Table */
 
+
 typedef struct routingTable {
     DLL *table;
 } routingTable;
 
-int initRoutingTable(routingTable *, int nodeID, char *rouFile, char *resFile);
+routingTable *tRouting;
 
-void getResourcePath(char*, char*, int*, char*);
+int initRoutingTable(int nodeID, char *rouFile, char *resFile);
+
+int getRoutingInfo(char *, routingInfo *);
+int getRoutingPort(unsigned int);
+int getLocalPort(unsigned int);
+
+void insertLocalResource(char *, char*);
 
 /* Private methods */
-int loadRoutingTable(routingTable *, char *);
+int loadRoutingTable(routingTable *, unsigned int nodeID, char *, char *);
 routingEntry *parseRoutingLine(char *);
+routingEntry *getRoutingEntry(unsigned int);
+routingEntry *getMyRoutingEntry();
 #endif

@@ -10,11 +10,12 @@
 #include <errno.h>
 
 #include "connObj.h"
+#include "flaskParser.h"
 
 #define BUF_SIZE 8192 
 
 
-int newConnectionHandler(connObj *, char **);
+int newConnectionHandler(connObj *);
 void readConnectionHandler(connObj *);
 void processConnectionHandler(connObj *);
 void writeConnectionHandler(connObj *);

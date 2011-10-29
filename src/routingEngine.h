@@ -6,24 +6,22 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "routingTable.h"
-#include "resourceTable.h"
-#include "linkedList.h"
+#include "connHandler.h"
 
 typedef struct routingEngine {
-    routingTable *tRou;
-    resourceTable *tRes;
     int nodeID;
     int cycleTime;
     int neighborTimeout;
     int retranTimeout;
     int LSATimeout;
+    int (*newConnHandler)(connObj *); 
+    void (*readConnHandler)(connObj *);
+    void (*processConnHandler)(connObj *);
+    void (*writeConnHandler)(connObj *);
 } routingEngine;
 
 /* Public methods */
 void initRouter(routingEngine *router,
-                routingTable *tRouting,
-                resourceTable *tResource,
                 int nodeID,
                 int cycleTime,
                 int neighborTimeout,
@@ -33,9 +31,9 @@ void initRouter(routingEngine *router,
 int startRouter(routingEngine *);
 
 /* Private methods */
-void exitRouter(routingEngine *, DLL*);
+void exitRouter(routingEngine *, DLL *);
 int listenSocket(routingEngine *, int, int);
-int openSocket(int);
+int openSocket(int, char *);
 int closeSocket(int);
 void signalExitRouter();
 void signalRestartRouter();

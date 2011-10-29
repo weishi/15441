@@ -10,20 +10,23 @@ $(CC) $(CLFAGS) $< -o $@
 endef
 
 CC=gcc
-CFLAGS=-Wall -Werror -Wextra -Wshadow -Wunreachable-code -O2 -D_FORTIFY_SOURCE=2
+CFLAGS=-Wall -Werror -Wextra -Wshadow -Wunreachable-code -g -O2 -D_FORTIFY_SOURCE=2
 SOURCE=src
 VPATH=$(SOURCE)
 OBJECTS = routed.o
 OBJECTS += routingEngine.o
 OBJECTS += routingTable.o
 OBJECTS += resourceTable.o
+OBJECTS += connHandler.o
+OBJECTS += connObj.o
+OBJECTS += flaskParser.o
 OBJECTS += linkedList.o
 
 
 default: routed
 
 routed: $(OBJECTS)
-	$(CC) $(CFLAGS) -o .routed $(LFLAGS) $(OBJECTS)
+	$(CC) $(CFLAGS) -o routed $(LFLAGS) $(OBJECTS)
 
 $(SOURCE)/%.o: %.c
 	$(build-cmd)

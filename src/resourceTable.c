@@ -21,21 +21,28 @@ void freeResourceEntry(void *data)
 
 int initResourceTable(resourceTable *tRes, char *resFile)
 {
+    tRes->table= malloc(sizeof(DLL));
+    tRes->resFile=resFile;
     initList(tRes->table, compareResourceEntry, freeResourceEntry, NULL);
-    return loadResourceTable(tRes, resFile);
+    if(resFile == NULL) {
+        return 0;
+    } else {
+        return loadResourceTable(tRes, resFile);
+    }
 }
 
 int loadResourceTable(resourceTable *tRes, char *resFile)
 {
     FILE *fp;
-    char *line;
+    char *line=NULL;
     size_t len = 0;
     fp = fopen(resFile, "r");
     if(fp == NULL) {
         printf("Error reading resource table.\n");
         return -1;
     }
-    while(getline(&line, &len, fp) != 1) {
+    while(getline(&line, &len, fp) != -1) {
+        printf("%s", line);
         resourceEntry *re = parseResourceLine(line);
         insertNode(tRes->table, re);
     }
@@ -68,5 +75,36 @@ resourceEntry *parseResourceLine(char *line)
     return newObj;
 }
 
+char *getPathByName(resourceTable *tRes, char *objName)
+{
+    resourceEntry target;
+    target.name = objName;
+    target.path=NULL;
+    Node *ref = searchList(tRes->table, &target);
+    if(ref == NULL) {
+        return NULL;
+    } else {
+        resourceEntry *ret = (resourceEntry *)(ref->data);
+        return ret->path;
+    }
+}
 
+void insertResource(resourceTable *tRes,char *objName, char *objPath){
+    resourceEntry *newObj=malloc(sizeof(resourceEntry));
+    newObj->name=objName;
+    newObj->path=objPath;
+    insertNode(tRes->table, newObj);
+    writeResourceFile(tRes);
+    return;
+}
 
+void writeResourceFile(resourceTable *tRes){
+    FILE *fp=fopen(tRes->resFile, "w");
+    int i=0;
+    for(i=0;i<tRes->table->size;i++){
+        resourceEntry *entry=getNodeDataAt(tRes->table, i);
+        fprintf(fp, "%s %s\n", entry->name, entry->path);
+    }
+    fflush(fp);
+    fclose(fp);
+}

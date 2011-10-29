@@ -34,7 +34,7 @@ connObj *createConnObj(int connFd,
     newObj->readBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
     newObj->writeBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
     newObj->isRead=1;
-    newObj->isWrite=1;
+    newObj->isWrite=0;
     return newObj;
 }
 
@@ -114,13 +114,21 @@ int isEmptyConnObj(connObj *connPtr)
         return connPtr->curWriteSize == 0;
 }
 
-int isRead(connObj *connPtr)
+int isReadConnObj(connObj *connPtr)
 {
     return connPtr->isRead == 1;
 }
 
-int isWrite(connObj *connPtr)
+int isWriteConnObj(connObj *connPtr)
 {
     return connPtr->isWrite == 1;
 }
 
+enum connType getConnObjType(connObj *connPtr){
+    return connPtr->type;
+}
+
+void setConnObjIsWrite(connObj *connPtr){
+    connPtr->isWrite=1;
+    connPtr->isRead=0;
+}

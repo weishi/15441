@@ -22,10 +22,13 @@ void freeResourceEntry(void *);
 
 typedef struct resourceTable {
     DLL *table;
+    char *resFile;
 } resourceTable;
 
 int initResourceTable(resourceTable *, char *);
-
+char *getPathByName(resourceTable *, char *);
+void insertResource(resourceTable *, char *, char *);
+void writeResourceFile(resourceTable *);
 /* Private methods */
 int loadResourceTable(resourceTable *, char *);
 resourceEntry *parseResourceLine(char *);
