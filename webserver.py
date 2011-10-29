@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from flask import Flask, redirect, url_for, request
+from flask import Flask, redirect, url_for, request, send_file
 from werkzeug import secure_filename
 import sys
 import os
@@ -10,10 +10,11 @@ import urllib
 import tempfile
 import shutil
 
-servport = 0
+
 app = Flask(__name__)
 UPLOAD_FOLDER = './static/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+Host = 'unix38.andrew.cmu.edu'
 
 @app.route('/')
 def index():
@@ -80,29 +81,30 @@ def getFile(port,obj):
 	msg='GETRD '+obj
 	print 'sending resuqest ' + msg
 	response=sendReq(port,msg)
+	print response
 	if response.startswith('OK '):
 		#print response[3:]
-		page=urllib.urlopen(response[3:])
-		data=page.read()
-		page.close()
-		return data
+		return send_file(urllib.urlopen(response[3:]), as_attachment=True,
+				 attachment_filename='wolf.png')
 	else:
 		return 'Error'
 def sendReq(port, msg):
 	print 'sendReq'
 	print msg
 	print port
-	#s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	#s.connect((Host, Port))
-	#s.send(msg)
-	#response=[]
-	#while True:
-	#	chunk=s.recv(1024)
-	#      	if not chunk:
-	#		break
-	#	response.append(chunk)
-	#return ''.join(response)'
-	return ('OK http://localhost:5000/static/images/liso_header.png')
+	s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	print 'check'
+	s.connect((Host, port))
+	print 'check'
+	s.send(msg)
+	print 'check'
+	response=[]
+	while True:
+		chunk=s.recv(1024)
+	      	if not chunk:
+			break
+		response.append(chunk)
+	return ''.join(response)
 	
 if __name__ == '__main__':
 	if (len(sys.argv) > 1):
