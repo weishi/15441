@@ -34,7 +34,7 @@ connObj *createConnObj(int connFd,
     newObj->readBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
     newObj->writeBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
     newObj->isRead=1;
-    newObj->isWrite=1;
+    newObj->isWrite=0;
     return newObj;
 }
 

@@ -14,7 +14,7 @@ typedef struct routingEngine {
     int neighborTimeout;
     int retranTimeout;
     int LSATimeout;
-    int (*newConnHandler)(connObj *, char **);
+    int (*newConnHandler)(connObj *); 
     void (*readConnHandler)(connObj *);
     void (*processConnHandler)(connObj *);
     void (*writeConnHandler)(connObj *);

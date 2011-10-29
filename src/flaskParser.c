@@ -10,6 +10,7 @@ int flaskParse(char *readBuf, ssize_t rSize, char *writeBuf, ssize_t *wSize, int
     
     numMatch = sscanf(tmpBuf, "GETRD %ms", &objName);
     if(numMatch == 1) {
+        printf("GET %s\n", objName);
         free(tmpBuf);
         return flaskGETResponse(objName, writeBuf, wSize);
     }
@@ -40,6 +41,7 @@ int flaskGETResponse(char *objName, char *writeBuf, ssize_t *wSize)
                 rInfo.host, rInfo.port, rInfo.path);
         if(retSize < *wSize) {
             *wSize=retSize;
+            printf("%d bytes of response buffered.\n", retSize);
             return 1; //Write succeed.
         } else {
             return -1; //Write buffer overflowed.

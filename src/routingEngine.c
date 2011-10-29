@@ -29,6 +29,8 @@ int startRouter(routingEngine *engine)
     int localFD = openSocket(localPort, "TCP");
     if(routingFD < 0 || localFD < 0) {
         return EXIT_FAILURE;
+    }else{
+        printf("UDP Port: %d, TCP Port: %d\n", routingPort, localPort);
     }
     return listenSocket(engine, routingFD, localFD);
 }
@@ -105,8 +107,8 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, routingEngine *e
             if(FD_ISSET(connFd, readPool)) {
                 printf( "Active RD [%d] ", connFd);
                 engine->readConnHandler(connPtr);
+                engine->processConnHandler(connPtr);
             }
-            engine->processConnHandler(connPtr);
             if(FD_ISSET(connFd, writePool)) {
                 printf( "Active WR [%d] ", connFd);
                 engine->writeConnHandler(connPtr);
@@ -117,14 +119,13 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, routingEngine *e
         connPtr = getNodeDataAt(list, 0);
         listenFd = getConnObjSocket(connPtr);
         if(FD_ISSET(listenFd, readPool)) {
-            char *addr;
-            int status = engine->newConnHandler(connPtr, &addr);
+            int status = engine->newConnHandler(connPtr);
             if(status > 0) {
-                printf( "New HTTP connection accpted\n");
-                connPtr = createConnObj(status, BUF_SIZE, UDP);
+                printf( "New Flask connection accpted at [%d]\n", status);
+                connPtr = createConnObj(status, BUF_SIZE, TCP);
                 insertNode(list, connPtr);
             } else {
-                printf("cannot accept new HTTP Connection\n");
+                printf("cannot accept new Flask Connection\n");
             }
         }
         /* Handle Routing advertisement on UDP */
@@ -151,14 +152,16 @@ void createPool(DLL *list, fd_set *readPool, fd_set *writePool, int *maxSocket)
         connFd = getConnObjSocket(connPtr);
         FD_SET(connFd, readPool);
         max = connFd;
+        printf( "[%dLTCP]", connFd);
         /* Add listening socket for Routing (UDP) */
         connPtr = getNodeDataAt(list, 1);
         connFd = getConnObjSocket(connPtr);
         FD_SET(connFd, readPool);
         max = (connFd > max ) ? connFd : max;
+        printf( "[%dUDP]", connFd);
         /* Add client socket */
-        ref = ref->next;
-        i = 1;;
+        i = 2;
+        ref = getNodeAt(list, i);
         while(i < list->size) {
             connPtr = ref->data;
             connFd = getConnObjSocket(connPtr);

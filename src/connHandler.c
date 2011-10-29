@@ -1,6 +1,6 @@
 #include "connHandler.h"
 
-int newConnectionHandler(connObj *connPtr, char **addr)
+int newConnectionHandler(connObj *connPtr)
 {
     struct sockaddr_in clientAddr;
     socklen_t clientLength = sizeof(clientAddr);
@@ -10,7 +10,6 @@ int newConnectionHandler(connObj *connPtr, char **addr)
         printf("Error accepting socket.\n");
         return -1;
     } else {
-        *addr = inet_ntoa(clientAddr.sin_addr);
         return newFd;
     }
 }

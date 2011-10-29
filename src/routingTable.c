@@ -21,6 +21,7 @@ void freeRoutingEntry(void *data)
 int initRoutingTable(int nodeID, char *rouFile, char *resFile)
 {
     tRouting = malloc(sizeof(routingTable));
+    tRouting->table = malloc(sizeof(DLL));
     initList(tRouting->table, compareRoutingEntry, freeRoutingEntry, NULL);
     return loadRoutingTable(tRouting, nodeID, rouFile, resFile);
 }
@@ -28,18 +29,22 @@ int initRoutingTable(int nodeID, char *rouFile, char *resFile)
 int loadRoutingTable(routingTable *tRou, unsigned int nodeID, char *rouFile, char *resFile)
 {
     FILE *fp;
-    char *line;
+    char *line=NULL;
     size_t len = 0;
     fp = fopen(rouFile, "r");
     if(fp == NULL) {
         printf("Error reading routing table config.\n");
         return -1;
     }
-    while(getline(&line, &len, fp) != 1) {
+    while(getline(&line, &len, fp) != -1) {
+        printf("configLine: %s", line);
         routingEntry *re = parseRoutingLine(line);
         if(re->nodeID == nodeID) {
             re->isMe = 1;
+            re->distance=0;
             initResourceTable(re->tRes, resFile);
+        }else{
+            initResourceTable(re->tRes, NULL);
         }
         insertNode(tRou->table, re);
     }
@@ -77,6 +82,7 @@ routingEntry *parseRoutingLine(char *line)
     newObj->localPort = localPort;
     newObj->serverPort = serverPort;
     newObj->tRes = malloc(sizeof(resourceTable));
+    newObj->distance =1;
     return newObj;
 }
 
