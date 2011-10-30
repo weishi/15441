@@ -1,10 +1,3 @@
-1. Header larger than buffer size will be rejected.
- 
-2. Zombie client is not detected. If clients don't close connection,
-the server will keep them. This could cause the problem of running 
-out of file descriptor.
+1. Request larger than buffer size will be rejected.
 
-3. Some corner case of LWS(linear white space) in request between keywords
-is not honored.
-
-4. Connection:close is not honored in CGI requests.
+2. ADDFILE will never fail, so ERROR response is never sent.
