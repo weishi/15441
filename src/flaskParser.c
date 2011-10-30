@@ -3,49 +3,58 @@
 int flaskParse(char *readBuf, ssize_t rSize, char *writeBuf, ssize_t *wSize, int full)
 {
     int numMatch;
-    char *objName;
-    char *objPath;
+    char *objName = NULL;
+    char *objPath = NULL;
+    int length1 = 0;
+    int length2 = 0;
     char *tmpBuf = calloc(rSize + 1, 1);
     memcpy(tmpBuf, readBuf, rSize);
-    
-    numMatch = sscanf(tmpBuf, "GETRD %ms", &objName);
-    if(numMatch == 1) {
+
+    numMatch = sscanf(tmpBuf, "GETRD %d %ms", &length1, &objName);
+    if(numMatch == 2) {
+        memset(objName + length1, '\0', strlen(objName) - length1);
         printf("GET %s\n", objName);
         free(tmpBuf);
         return flaskGETResponse(objName, writeBuf, wSize);
     }
-    
-    numMatch = sscanf(tmpBuf, "ADDFILE %ms %ms", &objName, &objPath);
-    if(numMatch == 2) {
+
+    numMatch = sscanf(tmpBuf, "ADDFILE %d %ms %d %ms", &length1, &objName, &length2, &objPath);
+    if(numMatch == 4) {
+        memset(objName + length1, '\0', strlen(objName) - length1);
+        memset(objPath + length2, '\0', strlen(objPath) - length2);
         free(tmpBuf);
         return flaskADDResponse(objName, objPath, writeBuf, wSize);
     }
-    
+
     free(tmpBuf);
     if(full) {
-        return -1;
-    } else {
-        return 0;
+        printf("Request full. Close connection.");
     }
+    printf("Bad request. Close connection.");
     return -1;
 }
 
 int flaskGETResponse(char *objName, char *writeBuf, ssize_t *wSize)
 {
     routingInfo rInfo;
-    int found=getRoutingInfo(objName, &rInfo);
+    int found = getRoutingInfo(objName, &rInfo);
+    int retSize;
     if(!found) {
-        return -1;
+        retSize = snprintf(writeBuf, *wSize, "NOTFOUND 0");
     } else {
-        int retSize = snprintf(writeBuf, *wSize, "OK http://%s:%d%s",
-                rInfo.host, rInfo.port, rInfo.path);
-        if(retSize < *wSize) {
-            *wSize=retSize;
-            printf("%d bytes of response buffered.\n", retSize);
-            return 1; //Write succeed.
-        } else {
-            return -1; //Write buffer overflowed.
-        }
+        char tmpbuf[8192];
+        snprintf(tmpbuf, 8192, "http://%s:%d%s",
+                 rInfo.host, rInfo.port, rInfo.path);
+        retSize = snprintf(writeBuf, *wSize,
+                 "OK %zu %s", strlen(tmpbuf), tmpbuf);
+    }
+    if(retSize < *wSize) {
+        *wSize = retSize;
+        printf("%d bytes of response buffered.\n", retSize);
+        return 1; //Write succeed.
+    } else {
+        printf("Write buffer overflowed.[GET] Close connection.");
+        return -1; //Write buffer overflowed.
     }
 }
 
@@ -53,11 +62,12 @@ int flaskGETResponse(char *objName, char *writeBuf, ssize_t *wSize)
 int flaskADDResponse(char *objName, char *objPath, char *writeBuf, ssize_t *wSize)
 {
     insertLocalResource(objName, objPath);
-    int retSize = snprintf(writeBuf, *wSize, "OK");
+    int retSize = snprintf(writeBuf, *wSize, "OK 0");
     if(retSize < *wSize) {
-        *wSize=retSize;
+        *wSize = retSize;
         return 1; //Write succeed.
     } else {
+        printf("Write buffer overflowed.[ADDFILE] Close connection.");
         return -1; //Write buffer overflowed.
     }
 }
