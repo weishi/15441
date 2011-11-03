@@ -29,7 +29,7 @@ int startRouter(routingEngine *engine)
     int localFD = openSocket(localPort, "TCP");
     if(routingFD < 0 || localFD < 0) {
         return EXIT_FAILURE;
-    }else{
+    } else {
         printf("UDP Port: %d, TCP Port: %d\n", routingPort, localPort);
     }
     return listenSocket(engine, routingFD, localFD);
@@ -40,7 +40,7 @@ void exitRouter(routingEngine *engine, DLL *connList)
     int i = 0;
     int size = connList->size;
     connObj *connPtr;
-    engine=engine;
+    engine = engine;
     for(i = 0; i < size; i++) {
         connPtr = getNodeDataAt(connList, i);
         setConnObjClose(connPtr);
@@ -65,6 +65,11 @@ int listenSocket(routingEngine *engine, int routingFD, int localFD)
     int numReady;
     DLL socketList;
 
+    timeval timeout, curTime, oldTime;
+    timeout.tv_sec = 1;
+    gettimeofday(&oldTime, NULL);
+    int advFlag = 0;
+    
     fd_set readPool, writePool;
     initList(&socketList, compareConnObj, freeConnObj, mapConnObj);
     insertNode(&socketList, createConnObj(localFD, 0, TCP));
@@ -76,8 +81,22 @@ int listenSocket(routingEngine *engine, int routingFD, int localFD)
             exitRouter(engine, &socketList);
             return retVal;
         }
+        /* Handle time for advertisement event */
+        gettimeofday(&curTime, NULL);
+        if(curTime.tv_sec - oldTime.tv_sec > engine->cycleTime) {
+            advFlag = 1;
+        } else {
+            advFlag = 0;
+        }
+        oldTime = curTime;
+        if(advFlag == 1) {
+            //TODO: implement this
+            makeNewAdvertisement();
+            continue;
+        }
+        /* Handle socket event */
         createPool(&socketList, &readPool, &writePool, &maxSocket);
-        numReady = select(maxSocket + 1, &readPool, &writePool, NULL, NULL);
+        numReady = select(maxSocket + 1, &readPool, &writePool, NULL, &timeout);
         if(numReady < 0) {
             printf("Select Error\n");
         } else if(numReady == 0 ) {
