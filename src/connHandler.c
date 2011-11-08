@@ -38,14 +38,26 @@ void processConnectionHandler(connObj *connPtr)
             setConnObjIsWrite(connPtr);
         }
         break;
-    case UDP:
+    case UDP: {
+        getConnObjReadBufferForRead(connPtr, &readBuf, &rSize);
+        if(rSize > 0) {
+            LSA *newLSA = LSAfromBuffer(readBuf, rSize);
+            removeConnObjReadSize(connPtr, rSize);
+            if(newLSA == NULL) {
+                printf("Bad LSA packet...Skip\n");
+            } else {
+                printf("Recv new LSA...Process\n");
+                updateRoutingTableFromLSA(newLSA);
+            }
+        }
+        getLSAFromRoutingTable(connPtr->LSAList);
         break;
+    }
     default:
         break;
     }
     return;
 }
-
 
 void readConnectionHandler(connObj *connPtr)
 {
@@ -60,10 +72,14 @@ void readConnectionHandler(connObj *connPtr)
             printf("Flask client...");
             retSize = recv(connFd, buf, size, 0);
             break;
-        case UDP:
+        case UDP: {
+            struct sockaddr_in client;
+            int clientLen = sizeof(client);
             printf("Peer routers...");
-            retSize = -1;
+            retSize = recvfrom(connFd, buf, size, 0,
+                               (struct sockaddr *)&client, &clientLen);
             break;
+        }
         default:
             retSize = -1 ;
         }

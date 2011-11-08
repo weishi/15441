@@ -65,34 +65,16 @@ int listenSocket(routingEngine *engine, int routingFD, int localFD)
     int numReady;
     DLL socketList;
 
-    timeval timeout, curTime, oldTime;
-    timeout.tv_sec = 1;
-    gettimeofday(&oldTime, NULL);
-    int advFlag = 0;
-    
     fd_set readPool, writePool;
     initList(&socketList, compareConnObj, freeConnObj, mapConnObj);
     insertNode(&socketList, createConnObj(localFD, 0, TCP));
-    insertNode(&socketList, createConnObj(routingFD, 0, TCP));
+    insertNode(&socketList, createConnObj(routingFD, 0, UDP));
     while(1) {
         if(shutdownRouter != 0) {
             int retVal = shutdownRouter;
             shutdownRouter = 0;
             exitRouter(engine, &socketList);
             return retVal;
-        }
-        /* Handle time for advertisement event */
-        gettimeofday(&curTime, NULL);
-        if(curTime.tv_sec - oldTime.tv_sec > engine->cycleTime) {
-            advFlag = 1;
-        } else {
-            advFlag = 0;
-        }
-        oldTime = curTime;
-        if(advFlag == 1) {
-            //TODO: implement this
-            makeNewAdvertisement();
-            continue;
         }
         /* Handle socket event */
         createPool(&socketList, &readPool, &writePool, &maxSocket);
@@ -147,8 +129,14 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, routingEngine *e
                 printf("cannot accept new Flask Connection\n");
             }
         }
-        /* Handle Routing advertisement on UDP */
-        // TODO:Checkpoint 2
+        /* Process UDP from Peer */
+        connPtr = getNodeDataAt(list, 1);
+        int connFD = getConnObjSocket(connPtr);
+        if(FD_ISSET(connFd, readPool)) {
+            printf( "Active UDP RD [%d] ", connFd);
+            engine->readConnHandler(connPtr);
+        }
+        engine->processConnHandler(connPtr);
         /* Remove closed connections from list */
         mapNode(list);
     }

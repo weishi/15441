@@ -27,6 +27,7 @@ typedef struct routingEntry {
     int localPort;
     int serverPort;
     resourceTable *tRes;
+    LSA *lsaPacket;
     int distance;
 } routingEntry;
 
@@ -49,6 +50,7 @@ int getRoutingPort(unsigned int);
 int getLocalPort(unsigned int);
 
 void insertLocalResource(char *, char*);
+void updateRoutingTableFromLSA(LSA *);
 
 /* Private methods */
 int loadRoutingTable(routingTable *, unsigned int nodeID, char *, char *);

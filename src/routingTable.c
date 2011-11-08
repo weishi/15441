@@ -83,6 +83,7 @@ routingEntry *parseRoutingLine(char *line)
     newObj->serverPort = serverPort;
     newObj->tRes = malloc(sizeof(resourceTable));
     newObj->distance =1;
+    newObj->lsaPacket=NULL;
     return newObj;
 }
 
