@@ -28,7 +28,7 @@ typedef struct routingEntry {
     int localPort;
     int serverPort;
     resourceTable *tRes;
-    LSA *lsaPacket;
+    LSA *lastLSA;
     int distance;
 } routingEntry;
 
@@ -38,19 +38,29 @@ void freeRoutingEntry(void *);
 /* Routing Table */
 typedef struct routingTable {
     DLL *table;
-    timeval oldTime;
+    timeval *oldTime;
     DLL *LSAList;
+    int cycleTime;
+    int neighborTimeout;
+    int retranTimeout;
+    int LSATimeout;
 } routingTable;
 
 routingTable *tRouting;
 
-int initRoutingTable(int nodeID, char *rouFile, char *resFile);
+int initRoutingTable(int nodeID,
+                     char *rouFile, char *resFile,
+                     int cycleTime,
+                     int neighborTimeout,
+                     int retranTimeout,
+                     int LSATimeout);
 
 int getRoutingInfo(char *, routingInfo *);
 int getRoutingPort(unsigned int);
 int getLocalPort(unsigned int);
 
-void insertLocalResource(char *, char*);
+void insertLocalResource(char *, char *);
+
 /* Called from connHandler */
 void updateRoutingTableFromLSA(LSA *);
 void getLSAFromRoutingTable(DLL *);
@@ -61,4 +71,8 @@ int loadRoutingTable(routingTable *, unsigned int nodeID, char *, char *);
 routingEntry *parseRoutingLine(char *);
 routingEntry *getRoutingEntry(unsigned int);
 routingEntry *getMyRoutingEntry();
+void updateTime();
+void newAdvertisement(DLL *);
+void updateLSArouting(LSA *);
+void addLSAWithDest(DLL *, LSA *, unsigned int ignore);
 #endif

@@ -46,7 +46,8 @@ int main(int argc, char *argv[])
             nodeID, configFile, resFile, 
             cycleTime, neighborTimeout, retranTimeout, LSATimeout);
     
-    if(initRoutingTable(nodeID, configFile, resFile) == -1) {
+    if(initRoutingTable(nodeID, configFile, resFile,
+                cycleTime, neighborTimeout, retranTimeout, LSATimeout) == -1) {
         printf("Error reading router config file.\n");
         return EXIT_FAILURE;
     }

@@ -3,12 +3,14 @@
 void initList(DLL *list,
               int (*compare)(void *, void *),
               void (*freeData)(void *),
-              int (*map)(void *data))
+              int (*map)(void *data)
+              void *(*copyData)(void *data))
 {
     list->head = NULL;
     list->size = 0;
     list->compare = compare;
     list->freeData = freeData;
+    list->copyData = copyData;
     list->map = map;
 }
 
@@ -19,6 +21,34 @@ void freeList(DLL *list)
             removeNodeAt(list, 0);
         }
         free(list);
+    }
+}
+
+DLL *copyList(DLL *list)
+{
+    DLL *newList = malloc(sizeof(DLL));
+    if(list != NULL) {
+        int i = 0;
+        while(i < list->size) {
+            void *data = getNodeDataAt(list, i);
+            void *newData = list->copyData(data);
+            insertNode(newList, newData);
+            i++;
+        }
+    }
+    return newList;
+}
+
+void insertList(DLL *destlist, DLL *srcList)
+{
+    if(srcList != NULL) {
+        int i = 0;
+        while(i < srcList->size ) {
+            void *data = getNodeDataAt(srcList, 0);
+            void *newData = srcList->copyData(data);
+            insertNode(destList, newData);
+            i++;
+        }
     }
 }
 

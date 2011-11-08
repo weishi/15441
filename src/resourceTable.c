@@ -89,6 +89,16 @@ char *getPathByName(resourceTable *tRes, char *objName)
     }
 }
 
+void updateLSAresource(LSA *lsa, resourceTable *tRes){
+    DLL *table=tRes->table;
+    int i=0;
+    while(i<table->size){
+        resourceEntry *entry=getNodeDataAt(table, i);
+        insertLSAresource(lsa, entry->name);
+        i++;
+    }
+}
+
 void insertResource(resourceTable *tRes,char *objName, char *objPath){
     resourceEntry *newObj=malloc(sizeof(resourceEntry));
     newObj->name=objName;

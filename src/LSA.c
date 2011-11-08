@@ -3,12 +3,28 @@
 LSA *newLSA(uint32_t senderID, uint32_t seqNo)
 {
     LSA *newObj = malloc(sizeof(LSA));
+    newObj->dest = NULL;
     newObj->version = 1;
     newObj->TTL = 32;
     newObj->senderID = senderID;
     newObj->seqNo = seqNo;
     return newObj;
 
+}
+void replaceLSA(LSA **ptr, LSA *newLSA){
+    freeLSA(*ptr);
+    *ptr=newLSA;
+}
+
+void incLSASeq(LSA *lsa)
+{
+    lsa->seqNo++;
+}
+void setLSADest(LSA *lsa, char *dest, int port)
+{
+    lsa->port = port;
+    lsa->dest = malloc(strlen(dest) + 1);
+    strcpy(lsa->dest, dest);
 }
 
 LSA *LSAfromBuffer(char *buf, ssize_t length)
@@ -34,6 +50,7 @@ LSA *LSAfromBuffer(char *buf, ssize_t length)
     newObj->seqNo = seqNo;
     newObj->numLink = numLink;
     newObj->numObj = numObj;
+    gettimeofday(newObj->timestamp, NULL);
     /* Get node ID */
     newObj->listLink = malloc(sizeof(uint32_t) * numLink);
     for(i = 0; i < numLink; i++) {

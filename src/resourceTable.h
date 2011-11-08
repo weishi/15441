@@ -29,6 +29,9 @@ int initResourceTable(resourceTable *, char *);
 char *getPathByName(resourceTable *, char *);
 void insertResource(resourceTable *, char *, char *);
 void writeResourceFile(resourceTable *);
+
+void updateLSAresource(DLL *resList, resourceTable *);
+
 /* Private methods */
 int loadResourceTable(resourceTable *, char *);
 resourceEntry *parseResourceLine(char *);

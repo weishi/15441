@@ -17,15 +17,19 @@ typedef struct DLL {
     int (*compare)(void *, void *);
     void (*freeData)(void *);
     int (*map)(void *);
+    int (*copyData)(void *);
 } DLL;
 
 
 void initList(DLL *list,
               int (*compare)(void *, void *),
               void (*freeData)(void *),
-              int (*map)(void *data)
+              int (*map)(void *data),
+              void *(*copyData)(void *)
              );
 void freeList(DLL *list);
+DLL* copyList(DLL *list);
+void insertList(DLL *destList, DLL*srcList);
 
 void insertNode(DLL *list, void *data);
 
