@@ -6,6 +6,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
+#include <sys/time.h>
 
 #include "linkedList.h"
 #include "resourceTable.h"
@@ -35,10 +36,10 @@ int compareRoutingEntry(void *, void *);
 void freeRoutingEntry(void *);
 
 /* Routing Table */
-
-
 typedef struct routingTable {
     DLL *table;
+    timeval oldTime;
+    DLL *LSAList;
 } routingTable;
 
 routingTable *tRouting;
@@ -50,7 +51,10 @@ int getRoutingPort(unsigned int);
 int getLocalPort(unsigned int);
 
 void insertLocalResource(char *, char*);
+/* Called from connHandler */
 void updateRoutingTableFromLSA(LSA *);
+void getLSAFromRoutingTable(DLL *);
+
 
 /* Private methods */
 int loadRoutingTable(routingTable *, unsigned int nodeID, char *, char *);

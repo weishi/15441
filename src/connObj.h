@@ -24,6 +24,7 @@ typedef struct connObj {
     int isWrite;
     char *readBuffer;
     char *writeBuffer;
+    DLL *LSAList;
     enum connType type;
 } connObj;
 

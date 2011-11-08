@@ -21,7 +21,7 @@ int mapConnObj(void *data)
 
 
 connObj *createConnObj(int connFd,
-                       ssize_t bufferSize,enum connType type)
+                       ssize_t bufferSize, enum connType type)
 {
     connObj *newObj = malloc(sizeof(connObj));
     newObj->connFd = connFd;
@@ -33,8 +33,14 @@ connObj *createConnObj(int connFd,
     newObj->isOpen = 1;
     newObj->readBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
     newObj->writeBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
-    newObj->isRead=1;
-    newObj->isWrite=0;
+    newObj->isRead = 1;
+    newObj->isWrite = 0;
+    if(type == UDP) {
+        newObj->LSAList = malloc(sizeof(DLL));
+        initList(newObj->LSAList, compareLSA, freeLSA, NULL);
+    } else {
+        newObj->LSAList = NULL;
+    }
     return newObj;
 }
 
@@ -111,7 +117,7 @@ int isFullConnObj(connObj *connPtr)
 
 int isEmptyConnObj(connObj *connPtr)
 {
-        return connPtr->curWriteSize == 0;
+    return connPtr->curWriteSize == 0;
 }
 
 int isReadConnObj(connObj *connPtr)
@@ -124,11 +130,13 @@ int isWriteConnObj(connObj *connPtr)
     return connPtr->isWrite == 1;
 }
 
-enum connType getConnObjType(connObj *connPtr){
+enum connType getConnObjType(connObj *connPtr)
+{
     return connPtr->type;
 }
 
-void setConnObjIsWrite(connObj *connPtr){
-    connPtr->isWrite=1;
-    connPtr->isRead=0;
+void setConnObjIsWrite(connObj *connPtr)
+{
+    connPtr->isWrite = 1;
+    connPtr->isRead = 0;
 }

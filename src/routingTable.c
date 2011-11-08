@@ -17,10 +17,16 @@ void freeRoutingEntry(void *data)
 
 
 /* Routing Table */
+void updateTime(){
+    gettimeofday(&(tRouting->oldTime), NULL);
+}
 
 int initRoutingTable(int nodeID, char *rouFile, char *resFile)
 {
     tRouting = malloc(sizeof(routingTable));
+    updateTime();
+    tRouting->LSAList = malloc(sizeof(DLL));
+    initList(tRouting->LSAList, compareLSA, freeLSA, NULL);
     tRouting->table = malloc(sizeof(DLL));
     initList(tRouting->table, compareRoutingEntry, freeRoutingEntry, NULL);
     return loadRoutingTable(tRouting, nodeID, rouFile, resFile);
