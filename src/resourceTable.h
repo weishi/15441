@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "linkedList.h"
+#include "LSA.h"
 
 /* Resource Entry for DLL */
 

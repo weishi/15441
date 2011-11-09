@@ -8,6 +8,7 @@ LSA *newLSA(uint32_t senderID, uint32_t seqNo)
     newObj->TTL = 32;
     newObj->senderID = senderID;
     newObj->seqNo = seqNo;
+    newObj->type=0;
     return newObj;
 
 }
@@ -20,11 +21,39 @@ void incLSASeq(LSA *lsa)
 {
     lsa->seqNo++;
 }
+
+void setLSAAck(LSA *lsa){
+    lsa->type=1;
+}
+
+int isLSAAck(LSA *lsa){
+    return lsa->type==1;
+}
+
+void decLSATTL(LSA *lsa){
+    lsa->TTL--;
+}
+
 void setLSADest(LSA *lsa, char *dest, int port)
 {
     lsa->port = port;
     lsa->dest = malloc(strlen(dest) + 1);
     strcpy(lsa->dest, dest);
+}
+
+LSA *headerLSAfromLSA(LSA *lsa){
+    LSA *newObj=mallco(sizeof(LSA));
+    newObj->dest=NULL;
+    newObj->version=lsa->version;
+    newObj->TTL=lsa->TTL;
+    newObj->type=lsa->type;
+    newObj->senderID=lsa->senderID;
+    newObj->seqNo=lsa->seqNo;
+    newObj->numLink=0;
+    newObj->numObj=0;
+    newObj->listLink=NULL;
+    newObj->listObj=NULL;
+    return newObj;
 }
 
 LSA *LSAfromBuffer(char *buf, ssize_t length)

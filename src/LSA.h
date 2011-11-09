@@ -10,6 +10,7 @@
 
 typedef struct LSA {
     char *dest;
+    char *src;
     int port;
     uint8_t version;
     uint8_t TTL;
@@ -21,6 +22,7 @@ typedef struct LSA {
     uint32_t *listLink;
     char **listObj;
     timeval timestamp;
+    int hasACK;
 } LSA;
 
 /* Constructor */
@@ -39,6 +41,8 @@ void replaceLSA(LSA **, LSA *);
 /* Getters and Setters */
 void incLSASeq(LSA *);
 void setLSADest(LSA *, char*, int);
+void setLSAAck(LSA *);
+int isLSAAck(LSA *);
 void insertLSAlink(LSA *, uint32_t);
 void insertLSAresource(LSA *, char *);
 #endif

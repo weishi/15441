@@ -24,7 +24,6 @@ void newAdvertisement(DLL *list)
     routingEntry *myEntry = getMyRoutingEntry();
     if((myEntry->lastLSA == NULL)  ||
             (curTime.tv_sec - oldTime->tv_sec > tRouting->cycleTime)) {
-
         newAds = headerLSAFromLSA(myEntry->lastLSA);
         updateLSArouting(newAds);
         updateLSAresource(newAds, myEntry->tRes);
@@ -66,7 +65,43 @@ void updateLSArouting(LSA *lsa)
 /* Called from connHandler */
 void updateRoutingTableFromLSA(LSA *lsa)
 {
+    int isNew, isHigher, isZero;
+    unsigned int nodeID = lsa->senderID;
+    if(isLSAAck(lsa)) {
+        //Update hasACK
+    } else {
+        routingEntry *entry = getRoutingEntry(nodeID);
+        isZero= (lsa->TTL==0);
+        isNew = (entry == NULL && !isZero);
+        isHigher = (entry != NULL && entry->lastLSA->seqNo < lsa->seqNo && !isZero);
+        //Send back ACK (ANY)
+        LSA *ack = headerLSAfromLSA(lsa);
+        setLSAAck(ack);
+        senderEntry = getRoutingEntryByHost(lsa->src);
+        setLSADest(lsa, senderEntry->host, senderEntry->routingPort);
+        addLSAtoBuffer(lsa);
+        //Remove routing entry (isZero)
+        if(isZero){
+            
+        }
+        //Make new routing entry (isNew)
+        if(isNew) {
+            routingEntry *newEntry = malloc(sizeof(routingEntry));
+            newEntry->nodeID = nodeID;
+            newEntry->lastLSA = lsa;
+        }
+        //Update routing table & flood others (isNew || isHigher)
+        if(isNew || isHigher) {
+            //Update
+            //Flood
+            LSA *floodLSA=LSAfromLSA(lsa);
+            decLSATTL(lsa);
+            addLSAWithDest(getLocalList(), floodLSA, );
 
+
+        }
+
+    }
 }
 
 void getLSAFromRoutingTable(DLL *list)
@@ -78,10 +113,7 @@ void getLSAFromRoutingTable(DLL *list)
         removeNode(localList, 0);
     }
     /* Add Advertisement LSA */
-    LSA *newAds = newAdvertisement();
-    if(newAds != NULL) {
-        insertNode(list, newAds);
-    }
+    newAdvertisement(list);
     /* Anything more to add? */
 }
 
@@ -194,6 +226,19 @@ int getRoutingInfo(char *objName, routingInfo *rInfo)
         }
     }
     return found;
+}
+
+routingEntry *getRoutingEntryByHost(char *host)
+{
+    routingTable *tRou = tRouting;
+    int i = 0;
+    for(i = 0; i < tRou->table->size; i++) {
+        routingEntry *entry = getNodeDataAt(tRou->table, i);
+        if(entry->host != NULL && strcmp(entry->host, host) == 0) {
+            return entry;
+        }
+    }
+    return NULL;
 }
 
 routingEntry *getRoutingEntry(unsigned int nodeID)
