@@ -38,7 +38,7 @@ void freeRoutingEntry(void *);
 /* Routing Table */
 typedef struct routingTable {
     DLL *table;
-    timeval *oldTime;
+    struct timeval *oldTime;
     DLL *LSAList;
     int cycleTime;
     int neighborTimeout;
@@ -73,10 +73,12 @@ routingEntry *getRoutingEntry(unsigned int);
 void removeRoutingEntry(unsigned int);
 routingEntry *getRoutingEntryByHost(char *);
 routingEntry *getMyRoutingEntry();
+DLL *getLocalList();
+
 unsigned int getLastNodeID(LSA *);
 void updateTime();
 void newAdvertisement(DLL *);
-void updateLSArouting(LSA *);
+void fillLSAWithLink(LSA *);
 void addLSAWithDest(DLL *, LSA *, unsigned int ignore);
 void addLSAWithOneDest(DLL *, LSA *, unsigned int destID);
 

@@ -3,7 +3,7 @@
 void initList(DLL *list,
               int (*compare)(void *, void *),
               void (*freeData)(void *),
-              int (*map)(void *data)
+              int (*map)(void *data),
               void *(*copyData)(void *data))
 {
     list->head = NULL;
@@ -39,7 +39,7 @@ DLL *copyList(DLL *list)
     return newList;
 }
 
-void insertList(DLL *destlist, DLL *srcList)
+void insertList(DLL *destList, DLL *srcList)
 {
     if(srcList != NULL) {
         int i = 0;

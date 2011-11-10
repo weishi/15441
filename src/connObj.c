@@ -11,6 +11,7 @@ void freeConnObj(void *data)
     close(connPtr->connFd);
     free(connPtr->readBuffer);
     free(connPtr->writeBuffer);
+    free(connPtr->src);
     free(connPtr);
 }
 
@@ -35,9 +36,10 @@ connObj *createConnObj(int connFd,
     newObj->writeBuffer = (bufferSize > 0) ? malloc(bufferSize) : NULL;
     newObj->isRead = 1;
     newObj->isWrite = 0;
+    newObj->src = NULL;
     if(type == UDP) {
         newObj->LSAList = malloc(sizeof(DLL));
-        initList(newObj->LSAList, compareLSA, freeLSA, NULL);
+        initList(newObj->LSAList, compareLSA, freeLSA, NULL, NULL);
     } else {
         newObj->LSAList = NULL;
     }
@@ -48,6 +50,11 @@ connObj *createConnObj(int connFd,
 int getConnObjSocket(connObj *connPtr)
 {
     return connPtr->connFd;
+}
+
+char *getConnObjSrc(connObj *connPtr)
+{
+    return connPtr->src;
 }
 
 void getConnObjReadBufferForRead(connObj *connPtr, char **buf, ssize_t *size)
@@ -139,4 +146,15 @@ void setConnObjIsWrite(connObj *connPtr)
 {
     connPtr->isWrite = 1;
     connPtr->isRead = 0;
+}
+
+void setConnObjNonBlock(connObj *connPtr)
+{
+    int flag = fcntl(connPtr->connFd, F_GETFL, 0);
+    flag = flag | O_NONBLOCK;
+    fcntl(connPtr->connFd, F_SETFL, flag);
+}
+
+DLL *getConnObjLSAList(connObj *connPtr){
+    return connPtr->LSAList;
 }

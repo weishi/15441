@@ -31,7 +31,7 @@ char *getPathByName(resourceTable *, char *);
 void insertResource(resourceTable *, char *, char *);
 void writeResourceFile(resourceTable *);
 
-void updateLSAresource(DLL *resList, resourceTable *);
+void fillLSAWithObj(LSA *, resourceTable *);
 
 /* Private methods */
 int loadResourceTable(resourceTable *, char *);

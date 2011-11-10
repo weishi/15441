@@ -6,8 +6,11 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/time.h>
+#include <netinet/in.h>
 
 
+#include "linkedList.h"
 
 
 typedef struct LSA {
@@ -23,7 +26,7 @@ typedef struct LSA {
     uint32_t numObj;
     uint32_t *listLink;
     DLL *listObj;
-    timeval timestamp;
+    struct timeval timestamp;
     int hasACK;
 } LSA;
 
@@ -35,9 +38,9 @@ LSA *newLSA(uint32_t, uint32_t);
 
 int compareLSA(void *data1, void *data2);
 void freeLSA(void *data);
-int mapLSA(void *data);
+void *copyLSA(void *data);
 
-void LSAtoBuffer(LSA *, char **, int *);
+void LSAtoBuffer(LSA *, char **, ssize_t*);
 
 void replaceLSA(LSA **, LSA *);
 /* Getters and Setters */
@@ -52,6 +55,6 @@ int isLSAAck(LSA *);
 void decLSATTL(LSA *lsa);
 uint8_t getLSATTL(LSA *lsa);
 
-void insertLSAlink(LSA *, uint32_t);
-void insertLSAresource(LSA *, char *);
+void insertLSALink(LSA *, uint32_t);
+void insertLSAObj(LSA *, char *);
 #endif

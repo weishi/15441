@@ -6,6 +6,10 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
+#include <fcntl.h>
+
+#include "linkedList.h"
+#include "LSA.h"
 
 enum connType {
     TCP,
@@ -26,6 +30,7 @@ typedef struct connObj {
     char *writeBuffer;
     DLL *LSAList;
     enum connType type;
+    char *src;
 } connObj;
 
 
@@ -39,6 +44,8 @@ connObj *createConnObj(int, ssize_t, enum connType);
 
 /* Getters and Setters */
 int getConnObjSocket(connObj *);
+char *getConnObjSrc(connObj *connPtr);
+DLL *getConnObjLSAList(connObj *connPtr);
 void getConnObjReadBufferForRead(connObj *, char **, ssize_t *);
 void getConnObjReadBufferForWrite(connObj *, char **, ssize_t *);
 void getConnObjWriteBufferForRead(connObj *, char **, ssize_t *);
@@ -59,4 +66,5 @@ int isEmptyConnObj(connObj *);
 enum connType getConnObjType(connObj *);
 
 void setConnObjIsWrite(connObj *);
+void setConnObjNonBlock(connObj *);
 #endif

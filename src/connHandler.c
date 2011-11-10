@@ -41,13 +41,13 @@ void processConnectionHandler(connObj *connPtr)
     case UDP: {
         getConnObjReadBufferForRead(connPtr, &readBuf, &rSize);
         if(rSize > 0) {
-            LSA *newLSA = LSAfromBuffer(readBuf, rSize);
+            LSA *incomingLSA = LSAfromBuffer(readBuf, rSize);
             removeConnObjReadSize(connPtr, rSize);
             if(newLSA == NULL) {
                 printf("Bad LSA packet...Skip\n");
             } else {
                 printf("Recv new LSA...Process\n");
-                updateRoutingTableFromLSA(newLSA);
+                updateRoutingTableFromLSA(incomingLSA);
             }
         }
         getLSAFromRoutingTable(connPtr->LSAList);
@@ -69,15 +69,19 @@ void readConnectionHandler(connObj *connPtr)
         getConnObjReadBufferForWrite(connPtr, &buf, &size);
         switch(getConnObjType(connPtr)) {
         case TCP:
-            printf("Flask client...");
+            printf("Flask client...\n");
             retSize = recv(connFd, buf, size, 0);
             break;
         case UDP: {
+            char *ip;
             struct sockaddr_in client;
-            int clientLen = sizeof(client);
-            printf("Peer routers...");
+            unsigned int clientLen = sizeof(client);
+            printf("Peer routers...\n");
             retSize = recvfrom(connFd, buf, size, 0,
                                (struct sockaddr *)&client, &clientLen);
+            ip = inet_ntoa(client.sin_addr);
+            connPtr->src = malloc(strlen(ip) + 1);
+            strcpy(connPtr->src, ip);
             break;
         }
         default:
@@ -108,34 +112,60 @@ void writeConnectionHandler(connObj *connPtr)
     char *buf;
     ssize_t size, retSize;
     int connFd = getConnObjSocket(connPtr);
-    getConnObjWriteBufferForRead(connPtr, &buf, &size);
     printf("Ready to write %zu bytes...", size);
     switch(getConnObjType(connPtr)) {
     case TCP:
+        getConnObjWriteBufferForRead(connPtr, &buf, &size);
         printf("Sending to Flask");
         retSize = send(connFd, buf, size, 0);
         break;
-    case UDP:
-        retSize = -1;
+    case UDP: {
+        //Write as many as possible, until block
+        struct sockaddr_in dest;
+        DLL *list = getConnObjLSAList(connPtr);
+        getConnObjWriteBufferForWrite(connPtr, &buf, &size);
+        while(list->size > 0) {
+            LSA *thisLSA = getNodeDataAt(list, 0);
+            LSAtoBuffer(thisLSA, &buf, &size);
+            //Prepare destination address/port
+            memset(&dest, '\0', sizeof(dest));
+            dest.sin_family = AF_INET;
+            dest.sin_addr.s_addr = inet_addr(thisLSA->dest);
+            dest.sin_port = htons(thisLSA->port);
+            retSize = sendto(connFd, buf, size, 0,
+                             (struct sockaddr *)&dest, sizeof(dest));
+            if(retSize == -1) {
+                break;
+            } else {
+                printf("%d LSA left.\n", list->size);
+                removeNodeAt(list, 0);
+                removeConnObjWriteSize(connPtr, size);
+            }
+        }
         break;
+    }
     default:
         retSize = -1;
     }
     if(retSize == -1) {
         if(errno == EINTR) {
             printf("RECV EINTR. Try later again.\n");
-            return;
+        } else if(errno == EAGAIN || errno == EWOULDBLOCK) {
+            printf("UDP Write would block. Wait for next round.\n");
         } else {
             printf("Error sending to client. Close connection.\n");
             setConnObjClose(connPtr);
         }
-    } else if(retSize != size) {
+    } else if(getConnObjType(connPtr) == TCP && retSize != size) {
         printf("Sending to client with short count.\n");
         removeConnObjWriteSize(connPtr, retSize);
-    } else {
+    } else if(getConnObjType(connPtr) == TCP) {
         printf("WriteBuf cleared. Close connection.\n");
         removeConnObjWriteSize(connPtr, size);
         setConnObjClose(connPtr);
+    } else {
+        printf("All Buffered LSA sent.\n");
     }
+
 }
 

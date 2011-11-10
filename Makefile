@@ -21,6 +21,7 @@ OBJECTS += connHandler.o
 OBJECTS += connObj.o
 OBJECTS += flaskParser.o
 OBJECTS += linkedList.o
+OBJECTS += LSA.o
 
 
 default: routed

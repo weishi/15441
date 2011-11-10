@@ -63,12 +63,17 @@ int listenSocket(routingEngine *engine, int routingFD, int localFD)
 {
     int maxSocket = (routingFD > localFD) ? routingFD : localFD;
     int numReady;
+    connObj *connPtr;
     DLL socketList;
+    struct timeval timeout;
+    timeout.tv_sec=1;
 
     fd_set readPool, writePool;
-    initList(&socketList, compareConnObj, freeConnObj, mapConnObj);
+    initList(&socketList, compareConnObj, freeConnObj, mapConnObj, NULL);
     insertNode(&socketList, createConnObj(localFD, 0, TCP));
-    insertNode(&socketList, createConnObj(routingFD, 0, UDP));
+    connPtr = createConnObj(routingFD, 0, UDP);
+    setConnObjNonBlock(connPtr); //UDP nonblocking
+    insertNode(&socketList, connPtr);
     while(1) {
         if(shutdownRouter != 0) {
             int retVal = shutdownRouter;
@@ -99,7 +104,7 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, routingEngine *e
         int i = 0;
         int listenFd;
         connObj *connPtr;
-        /* Handle existing connections */
+        /* Handle TCP connections */
         printf( "HandlePool: Total Existing [%d]\n", numPool);
         for(i = 2; i < numPool; i++) {
             connPtr = getNodeDataAt(list, i);
@@ -131,12 +136,17 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, routingEngine *e
         }
         /* Process UDP from Peer */
         connPtr = getNodeDataAt(list, 1);
-        int connFD = getConnObjSocket(connPtr);
-        if(FD_ISSET(connFd, readPool)) {
-            printf( "Active UDP RD [%d] ", connFd);
+        listenFd = getConnObjSocket(connPtr);
+        if(FD_ISSET(listenFd, readPool)) {
+            printf( "Active UDP RD [%d] ", listenFd);
             engine->readConnHandler(connPtr);
         }
         engine->processConnHandler(connPtr);
+        if(FD_ISSET(listenFd,writePool)) {
+            printf( "Active UDP WR [%d] ", listenFd);
+            engine->writeConnHandler(connPtr);
+        }
+        printf( "\n");
         /* Remove closed connections from list */
         mapNode(list);
     }

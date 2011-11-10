@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
+
+
 
 typedef struct Node {
     void *data;
@@ -17,7 +20,7 @@ typedef struct DLL {
     int (*compare)(void *, void *);
     void (*freeData)(void *);
     int (*map)(void *);
-    int (*copyData)(void *);
+    void *(*copyData)(void *);
 } DLL;
 
 
@@ -44,7 +47,11 @@ Node *getNodeAt(DLL *, int );
 void mapNode(DLL *);
 void applyList(DLL *, void (*applyMe)(void *) );
 
+
 int compareInt(void *data1, void *data2);
 void freeInt(void *data);
+int compareString(void *data1, void *data2);
+void freeString(void *data);
+void *copyString(void *data);
 
 #endif

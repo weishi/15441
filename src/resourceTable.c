@@ -23,7 +23,7 @@ int initResourceTable(resourceTable *tRes, char *resFile)
 {
     tRes->table= malloc(sizeof(DLL));
     tRes->resFile=resFile;
-    initList(tRes->table, compareResourceEntry, freeResourceEntry, NULL);
+    initList(tRes->table, compareResourceEntry, freeResourceEntry, NULL, NULL);
     if(resFile == NULL) {
         return 0;
     } else {
@@ -89,12 +89,12 @@ char *getPathByName(resourceTable *tRes, char *objName)
     }
 }
 
-void updateLSAresource(LSA *lsa, resourceTable *tRes){
+void fillLSAWithObj(LSA *lsa, resourceTable *tRes){
     DLL *table=tRes->table;
     int i=0;
     while(i<table->size){
         resourceEntry *entry=getNodeDataAt(table, i);
-        insertLSAresource(lsa, entry->name);
+        insertLSAObj(lsa, entry->name);
         i++;
     }
 }
