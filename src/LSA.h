@@ -27,8 +27,9 @@ typedef struct LSA {
     uint32_t *listLink;
     DLL *listObj;
     struct timeval timestamp;
-    int hasACK;
+    int hasAck;
     int hasRetran;
+    int isDown;
 } LSA;
 
 /* Constructor */
@@ -55,6 +56,9 @@ void setLSAAck(LSA *);
 int hasLSAAck(LSA *lsa);
 void gotLSAAck(LSA *lsa);
 int isLSAAck(LSA *);
+
+void setLSADown(LSA *lsa);
+int isLSADown(LSA *lsa);
 
 void decLSATTL(LSA *lsa);
 uint8_t getLSATTL(LSA *lsa);

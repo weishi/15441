@@ -37,6 +37,7 @@ LSA *newLSA(uint32_t senderID, uint32_t seqNo)
     newObj->type = 0;
     newObj->hasRetran = 0;
     newObj->hasAck = 0;
+    newObj->isDown= 0;
     return newObj;
 
 }
@@ -58,12 +59,12 @@ void setLSAAck(LSA *lsa)
 
 int hasLSAAck(LSA *lsa)
 {
-    return lsa->hasACK;
+    return lsa->hasAck;
 }
 
 void gotLSAAck(LSA *lsa)
 {
-    lsa->hasACK = 1;
+    lsa->hasAck = 1;
 }
 
 int isLSAAck(LSA *lsa)
@@ -76,6 +77,15 @@ void decLSATTL(LSA *lsa)
     lsa->TTL--;
 }
 
+int isLSADown(LSA *lsa){
+    return lsa->isDown;
+}
+
+void setLSADown(LSA *lsa)
+{
+    lsa->TTL=0;
+    lsa->isDown=1;
+}
 uint8_t getLSATTL(LSA *lsa)
 {
     return lsa->TTL;

@@ -77,9 +77,9 @@ DLL *getLocalLSABuffer();
 
 unsigned int getLastNodeID(LSA *);
 void updateTime();
-void newAdvertisement(DLL *);
+void newAdvertisement();
 void expireOldLSA();
-void checkNeighborDown(DLL *);
+void checkNeighborDown();
 
 void fillLSAWithLink(LSA *);
 void addLSAWithDest(DLL *, LSA *, unsigned int ignore);
