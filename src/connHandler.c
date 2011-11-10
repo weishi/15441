@@ -50,7 +50,7 @@ void processConnectionHandler(connObj *connPtr)
                 updateRoutingTableFromLSA(incomingLSA);
             }
         }
-        getLSAFromRoutingTable(connPtr->LSAList);
+        getLSAFromRoutingTable(&(connPtr->LSAList));
         break;
     }
     default:
@@ -112,21 +112,26 @@ void writeConnectionHandler(connObj *connPtr)
     char *buf;
     ssize_t size, retSize;
     int connFd = getConnObjSocket(connPtr);
-    printf("Ready to write %zu bytes...", size);
     switch(getConnObjType(connPtr)) {
     case TCP:
         getConnObjWriteBufferForRead(connPtr, &buf, &size);
+        printf("Ready to write %zu bytes...", size);
         printf("Sending to Flask");
         retSize = send(connFd, buf, size, 0);
         break;
     case UDP: {
         //Write as many as possible, until block
+        printf("Sending to Peer\n");
         struct sockaddr_in dest;
         DLL *list = getConnObjLSAList(connPtr);
         getConnObjWriteBufferForWrite(connPtr, &buf, &size);
+        printf("Write buffer has %zu bytes free\n", size);
+        printf("Has %d UDP in queue\n", list->size);
         while(list->size > 0) {
             LSA *thisLSA = getNodeDataAt(list, 0);
-            LSAtoBuffer(thisLSA, &buf, &size);
+            LSAtoBuffer(thisLSA, buf, &size);
+            printf("Ready to write %zu bytes of UDP to %s:%d...\n", 
+                    size, thisLSA->dest, thisLSA->port);
             //Prepare destination address/port
             memset(&dest, '\0', sizeof(dest));
             dest.sin_family = AF_INET;

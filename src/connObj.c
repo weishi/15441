@@ -37,12 +37,7 @@ connObj *createConnObj(int connFd,
     newObj->isRead = 1;
     newObj->isWrite = 0;
     newObj->src = NULL;
-    if(type == UDP) {
-        newObj->LSAList = malloc(sizeof(DLL));
-        initList(newObj->LSAList, compareLSA, freeLSA, NULL, NULL);
-    } else {
-        newObj->LSAList = NULL;
-    }
+    newObj->LSAList = NULL;
     return newObj;
 }
 

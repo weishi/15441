@@ -63,7 +63,7 @@ void insertLocalResource(char *, char *);
 
 /* Called from connHandler */
 void updateRoutingTableFromLSA(LSA *);
-void getLSAFromRoutingTable(DLL *);
+void getLSAFromRoutingTable(DLL **);
 
 
 /* Private methods */

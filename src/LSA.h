@@ -14,9 +14,10 @@
 
 
 typedef struct LSA {
-    char *dest;
     char *src;
+    char *dest;
     int port;
+    //Payload
     uint8_t version;
     uint8_t TTL;
     uint16_t type;
@@ -26,6 +27,7 @@ typedef struct LSA {
     uint32_t numObj;
     uint32_t *listLink;
     DLL *listObj;
+    //Meta
     struct timeval timestamp;
     int hasAck;
     int hasRetran;
@@ -42,7 +44,7 @@ int compareLSA(void *data1, void *data2);
 void freeLSA(void *data);
 void *copyLSA(void *data);
 
-void LSAtoBuffer(LSA *, char **, ssize_t*);
+void LSAtoBuffer(LSA *, char *, ssize_t*);
 
 void replaceLSA(LSA **, LSA *);
 /* Getters and Setters */

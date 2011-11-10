@@ -31,8 +31,8 @@ void initList(DLL *list,
               void *(*copyData)(void *)
              );
 void freeList(DLL *list);
-DLL* copyList(DLL *list);
-void insertList(DLL *destList, DLL*srcList);
+DLL *copyList(DLL *list);
+void insertList(DLL *destList, DLL *srcList);
 
 void insertNode(DLL *list, void *data);
 

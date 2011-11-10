@@ -22,14 +22,25 @@ void newAdvertisement()
     struct timeval *oldTime = tRouting->oldTime;
     gettimeofday(&curTime, NULL);
     routingEntry *myEntry = getMyRoutingEntry();
-    if((myEntry->lastLSA == NULL)  ||
-            (curTime.tv_sec - oldTime->tv_sec > tRouting->cycleTime)) {
+    long diffTime = curTime.tv_sec - oldTime->tv_sec;
+    printf("DiffTime = %ld, cycleTime = %d\n", diffTime, tRouting->cycleTime);
+    int needAdv = diffTime > tRouting->cycleTime;
+    if(myEntry->lastLSA == NULL) {
+        newAds = newLSA(myEntry->nodeID, 0);
+        fillLSAWithLink(newAds);
+        fillLSAWithObj(newAds, myEntry->tRes);
+        myEntry->lastLSA = newAds;
+        newAds = LSAfromLSA(myEntry->lastLSA);
+        addLSAWithDest(getLocalLSABuffer(), newAds, 0);
+        updateTime();
+    } else if(needAdv) {
+        incLSASeq(myEntry->lastLSA);
         newAds = headerLSAfromLSA(myEntry->lastLSA);
         fillLSAWithLink(newAds);
         fillLSAWithObj(newAds, myEntry->tRes);
-        updateTime();
         replaceLSA(&(myEntry->lastLSA), newAds);
         addLSAWithDest(getLocalLSABuffer(), newAds, 0);
+        updateTime();
     }
 }
 
@@ -42,10 +53,12 @@ void addLSAWithDest(DLL *list, LSA *lsa, unsigned int ignoreID)
         if(entry->distance == 1 && entry->nodeID != ignoreID) {
             LSA *thisLSA = LSAfromLSA(lsa);
             setLSADest(thisLSA, entry->host, entry->routingPort);
+            printf("LSA Dest: %s:%d\n", thisLSA->dest, thisLSA->port);
             insertNode(list, thisLSA);
         }
         i++;
     }
+    freeLSA(lsa);
 }
 void addLSAWithOneDest(DLL *list, LSA *lsa, unsigned int destID)
 {
@@ -138,20 +151,20 @@ void updateRoutingTableFromLSA(LSA *lsa)
     }
 }
 
-void getLSAFromRoutingTable(DLL *list)
+void getLSAFromRoutingTable(DLL **list)
 {
     /* Add Advertisement LSA */
-    newAdvertisement(list);
+    printf("check newAdvertisement\n");
+    newAdvertisement();
     /* Timeout old LSA */
+    printf("expire old LSA\n");
     expireOldLSA();
     /* Retran LSA without ACK */
+    printf("check neighbor\n");
     checkNeighborDown();
     /* Add buffered LSA into list */
     DLL *localList = getLocalLSABuffer();
-    insertList(list, localList);
-    while(localList->size > 0) {
-        removeNode(localList, 0);
-    }
+    *list=localList;
     /* Anything more to add? */
 }
 
@@ -192,7 +205,7 @@ int initRoutingTable(int nodeID, char *rouFile, char *resFile,
     tRouting->LSATimeout = LSATimeout;
 
     tRouting->LSAList = malloc(sizeof(DLL));
-    initList(tRouting->LSAList, compareLSA, freeLSA, NULL, NULL);
+    initList(tRouting->LSAList, compareLSA, freeLSA, NULL, copyLSA);
     tRouting->table = malloc(sizeof(DLL));
     initList(tRouting->table,
              compareRoutingEntry, freeRoutingEntry, NULL, NULL);
@@ -392,26 +405,26 @@ void checkNeighborDown()
     gettimeofday(&curTime, NULL);
     for(i = 0; i < table->size; i++) {
         entry = getNodeDataAt(table, i);
-        if(entry->distance == 1 ) {
+        if(entry->distance == 1 && entry->lastLSA != NULL) {
             lsa = entry->lastLSA;
             if(!hasLSAAck(lsa)) {
                 diffTime = curTime.tv_sec - (lsa->timestamp).tv_sec;
-                int needRetran = diffTime > tRouting->retranTimeout 
-                    && hasLSARetran(lsa) 
-                    && diffTime < tRouting->neighborTimeout;
-                int isDown = diffTime >= tRouting->neighborTimeout 
-                    && !isLSADown(lsa);
+                int needRetran = diffTime > tRouting->retranTimeout
+                                 && hasLSARetran(lsa)
+                                 && diffTime < tRouting->neighborTimeout;
+                int isDown = diffTime >= tRouting->neighborTimeout
+                             && !isLSADown(lsa);
                 if(needRetran) {
-                    LSA *retranLSA=LSAfromLSA(lsa);
-                    routingEntry *myEntry=getMyRoutingEntry();
-                    addLSAWithOneDest(getLocalLSABuffer(), 
-                            retranLSA, myEntry->nodeID);
+                    LSA *retranLSA = LSAfromLSA(lsa);
+                    routingEntry *myEntry = getMyRoutingEntry();
+                    addLSAWithOneDest(getLocalLSABuffer(),
+                                      retranLSA, myEntry->nodeID);
                     setLSARetran(lsa);
                     printf("Neighbor[%d] needs retran\n", entry->nodeID);
                 } else if(isDown) {
                     //Flood with TTL=0
                     setLSADown(lsa);
-                    LSA *downLSA=LSAfromLSA(lsa);
+                    LSA *downLSA = LSAfromLSA(lsa);
                     addLSAWithDest(getLocalLSABuffer(), downLSA, entry->nodeID);
                     printf("Neighbor[%d] is down\n", entry->nodeID);
                 } else {
