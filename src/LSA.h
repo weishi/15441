@@ -8,6 +8,8 @@
 #include <string.h>
 
 
+
+
 typedef struct LSA {
     char *dest;
     char *src;
@@ -20,7 +22,7 @@ typedef struct LSA {
     uint32_t numLink;
     uint32_t numObj;
     uint32_t *listLink;
-    char **listObj;
+    DLL *listObj;
     timeval timestamp;
     int hasACK;
 } LSA;
@@ -41,8 +43,15 @@ void replaceLSA(LSA **, LSA *);
 /* Getters and Setters */
 void incLSASeq(LSA *);
 void setLSADest(LSA *, char*, int);
+
 void setLSAAck(LSA *);
+int hasLSAAck(LSA *lsa);
+void gotLSAAck(LSA *lsa);
 int isLSAAck(LSA *);
+
+void decLSATTL(LSA *lsa);
+uint8_t getLSATTL(LSA *lsa);
+
 void insertLSAlink(LSA *, uint32_t);
 void insertLSAresource(LSA *, char *);
 #endif

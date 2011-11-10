@@ -34,6 +34,7 @@ void newAdvertisement(DLL *list)
         return NULL;
     }
 }
+
 void addLSAWithDest(DLL *list, LSA *lsa, unsigned int ignoreID)
 {
     DLL *table = tRouting->table;
@@ -47,6 +48,12 @@ void addLSAWithDest(DLL *list, LSA *lsa, unsigned int ignoreID)
         }
         i++;
     }
+}
+void addLSAWithOneDest(DLL *list, LSA *lsa, unsigned int destID)
+{
+    routingEntry *entry = getRoutingEntry(destID);
+    setLSADest(lsa, entry->host, entry->routingPort);
+    insertNode(list, lsa);
 }
 
 void updateLSArouting(LSA *lsa)
@@ -65,42 +72,74 @@ void updateLSArouting(LSA *lsa)
 /* Called from connHandler */
 void updateRoutingTableFromLSA(LSA *lsa)
 {
-    int isNew, isHigher, isZero;
+    int isNew, isHigher, isSame, isLower, isZero, isMine;
     unsigned int nodeID = lsa->senderID;
     if(isLSAAck(lsa)) {
         //Update hasACK
+        routingEntry *senderEntry = getRoutingEntryByHost(lsa->src);
+        if(!hasLSAACK(senderEntry->lastLSA)){
+            gotLSAACK(senderEntry->lastLSA);
+            printf("LSA ACK checked in.\n");
+        }else{
+            printf("Got ACK for something we didn't send...\n");
+        }
     } else {
         routingEntry *entry = getRoutingEntry(nodeID);
-        isZero= (lsa->TTL==0);
+        routingEntry *myEntry = getMyRoutingEntry();
+        isZero = (lsa->TTL == 0);
         isNew = (entry == NULL && !isZero);
         isHigher = (entry != NULL && entry->lastLSA->seqNo < lsa->seqNo && !isZero);
+        isSame = (entry != NULL && entry->lastLSA->seqNo == lsa->seqNo && !isZero);
+        isLower = (entry != NULL && entry->lastLSA->seqNo > lsa->seqNo && !isZero);
+        isMine = (entry != NULL &&  entry == myEntry);
         //Send back ACK (ANY)
         LSA *ack = headerLSAfromLSA(lsa);
         setLSAAck(ack);
-        senderEntry = getRoutingEntryByHost(lsa->src);
+        routingEntry *senderEntry = getRoutingEntryByHost(lsa->src);
         setLSADest(lsa, senderEntry->host, senderEntry->routingPort);
         addLSAtoBuffer(lsa);
-        //Remove routing entry (isZero)
-        if(isZero){
-            
-        }
-        //Make new routing entry (isNew)
-        if(isNew) {
+        //Remove routing entry. Flood
+        if(isZero) {
+            removeRoutingEntry(nodeID);
+            LSA *floodLSA = LSAfromLSA(lsa);
+            unsigned int lastNodeID = getLastNodeID(lsa);
+            addLSAWithDest(getLocalList(), floodLSA, lastNodeID);
+        } else if(isMine && isHigher) {
+            //I rebooted, catch up to higher seq. No flood.
+            routingEntry *myEntry = getMyRoutingEntry();
+            if(isNew) {
+                myEntry->lastLSA = lsa;
+            } else {
+                myEntry->lastLSA->seqNo = lsa->seqNo;
+            }
+        } else if(isLower) {
+            //neiggbor rebooted. Echo back his last LSA. No Flood
+            routingEntry *entry = getRoutingEntry(nodeID);
+            LSA *backLSA = LSAfromLSA(entry->lastLSA);
+            addLSAWithOneDest(getLocalList(), backLSA, lastLSA->nodeID);
+        } else if(isNew) {
+            //Make new routing entry. Flood
             routingEntry *newEntry = malloc(sizeof(routingEntry));
             newEntry->nodeID = nodeID;
             newEntry->lastLSA = lsa;
+            LSA *floodLSA= LSAfromLSA(lsa);
+            decLSATTL(floodLSA);
+            if(getLSATTL(floodLSA) > 0) {
+                addLSAWithDest(getLocalList(), floodLSA, getLastNodeID(floodLSA));
+            }
+        } else if(isHigher) {
+            //Update routing table. Flood 
+            routingEntry *entry = getRoutingEntry(nodeID);
+            replaceLSA(&(entry->lastLSA), lsa);
+            //Flood if TTL > 0
+            LSA *floodLSA = LSAfromLSA(lsa);
+            decLSATTL(floodLSA);
+            if(getLSATTL(floodLSA) > 0) {
+                addLSAWithDest(getLocalList(), floodLSA, getLastNodeID(floodLSA));
+            }
+        }else{
+            printf("What kind of LSA is this?!\n");
         }
-        //Update routing table & flood others (isNew || isHigher)
-        if(isNew || isHigher) {
-            //Update
-            //Flood
-            LSA *floodLSA=LSAfromLSA(lsa);
-            decLSATTL(lsa);
-            addLSAWithDest(getLocalList(), floodLSA, );
-
-
-        }
-
     }
 }
 
@@ -114,10 +153,32 @@ void getLSAFromRoutingTable(DLL *list)
     }
     /* Add Advertisement LSA */
     newAdvertisement(list);
+    /* Timeout old LSA */
+
+    /* Retran LSA without ACK */
+    
     /* Anything more to add? */
 }
 
 /* Routing Table */
+unsigned int getLastNodeID(LSA *lsa)
+{
+    routingEntry *lastEntry = getRoutingEntryByHost(lsa->src);
+    return lastEntry->nodeID;
+}
+void removeRoutingEntry(unsigned int nodeID)
+{
+    routingTable *tRou = tRouting;
+    int i = 0;
+    for(i = 0; i < tRou->table->size; i++) {
+        routingEntry *entry = getNodeDataAt(tRou->table, i);
+        if(entry->nodeID == nodeID) {
+            removeNodeAt(tRou->table, i);
+        }
+    }
+}
+
+}
 void updateTime()
 {
     gettimeofday(&(tRouting->oldTime), NULL);

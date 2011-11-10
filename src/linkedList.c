@@ -174,3 +174,20 @@ void freeInt(void *data)
 {
     data = data;
 }
+
+int compareString(void *data1, void *data2)
+{
+    return strcmp((char *)data1, (char *)data2);
+}
+
+void freeString(void *data)
+{
+    free(data);
+}
+
+void *copyString(void *data)
+{
+    char *ptr = malloc(strlen((char *)data) + 1);
+    strcpy(ptr, (char *)data);
+    return ptr;
+}

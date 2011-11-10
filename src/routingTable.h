@@ -70,12 +70,15 @@ void getLSAFromRoutingTable(DLL *);
 int loadRoutingTable(routingTable *, unsigned int nodeID, char *, char *);
 routingEntry *parseRoutingLine(char *);
 routingEntry *getRoutingEntry(unsigned int);
+void removeRoutingEntry(unsigned int);
 routingEntry *getRoutingEntryByHost(char *);
 routingEntry *getMyRoutingEntry();
+unsigned int getLastNodeID(LSA *);
 void updateTime();
 void newAdvertisement(DLL *);
 void updateLSArouting(LSA *);
 void addLSAWithDest(DLL *, LSA *, unsigned int ignore);
+void addLSAWithOneDest(DLL *, LSA *, unsigned int destID);
 
 void addLSAtoBuffer(LSA *);
 
