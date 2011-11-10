@@ -28,12 +28,15 @@ LSA *newLSA(uint32_t senderID, uint32_t seqNo)
 {
     LSA *newObj = malloc(sizeof(LSA));
     newObj->dest = NULL;
-    newObj->dest = NULL;
+    newObj->port = 0;
+    newObj->src = NULL;
     newObj->version = 1;
     newObj->TTL = 32;
     newObj->senderID = senderID;
     newObj->seqNo = seqNo;
     newObj->type = 0;
+    newObj->hasRetran = 0;
+    newObj->hasAck = 0;
     return newObj;
 
 }
@@ -216,13 +219,21 @@ void insertLSAObj(LSA *lsa, char *objName)
         lsa->listObj = malloc(sizeof(DLL));
         initList(lsa->listObj, compareString, freeString, NULL, copyString);
     }
-    
+
     insertNode(lsa->listObj, lsa->listObj->copyData(objName));
     lsa->numObj++;
 
 }
 
 
+int hasLSARetran(LSA *lsa)
+{
+    return lsa->hasRetran;
+}
+void setLSARetran(LSA *lsa)
+{
+    lsa->hasRetran = 1;
+}
 
 
 

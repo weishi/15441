@@ -28,6 +28,7 @@ typedef struct LSA {
     DLL *listObj;
     struct timeval timestamp;
     int hasACK;
+    int hasRetran;
 } LSA;
 
 /* Constructor */
@@ -46,6 +47,9 @@ void replaceLSA(LSA **, LSA *);
 /* Getters and Setters */
 void incLSASeq(LSA *);
 void setLSADest(LSA *, char*, int);
+
+int hasLSARetran(LSA *);
+void setLSARetran(LSA *);
 
 void setLSAAck(LSA *);
 int hasLSAAck(LSA *lsa);

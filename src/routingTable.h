@@ -73,11 +73,14 @@ routingEntry *getRoutingEntry(unsigned int);
 void removeRoutingEntry(unsigned int);
 routingEntry *getRoutingEntryByHost(char *);
 routingEntry *getMyRoutingEntry();
-DLL *getLocalList();
+DLL *getLocalLSABuffer();
 
 unsigned int getLastNodeID(LSA *);
 void updateTime();
 void newAdvertisement(DLL *);
+void expireOldLSA();
+void checkNeighborDown(DLL *);
+
 void fillLSAWithLink(LSA *);
 void addLSAWithDest(DLL *, LSA *, unsigned int ignore);
 void addLSAWithOneDest(DLL *, LSA *, unsigned int destID);
