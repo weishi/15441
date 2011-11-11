@@ -11,7 +11,6 @@ int compareLSA(void *data1, void *data2)
 void freeLSA(void *data)
 {
     LSA *lsa = (LSA *)data;
-    free(lsa->src);
     freeList(lsa->listObj);
     free(lsa);
 }
@@ -28,7 +27,8 @@ LSA *newLSA(uint32_t senderID, uint32_t seqNo)
     LSA *newObj = malloc(sizeof(LSA));
     newObj->src = NULL;
     newObj->dest = NULL;
-    newObj->port = 0;
+    newObj->srcPort = 0;
+    newObj->destPort = 0;
     //Payload
     newObj->version = 1;
     newObj->TTL = 32;
@@ -100,7 +100,7 @@ uint8_t getLSATTL(LSA *lsa)
 
 void setLSADest(LSA *lsa, char *dest, int port)
 {
-    lsa->port = port;
+    lsa->destPort = port;
     lsa->dest = dest;
 }
 
@@ -109,7 +109,8 @@ LSA *headerLSAfromLSA(LSA *lsa)
     LSA *newObj = malloc(sizeof(LSA));
     newObj->src = lsa->src;
     newObj->dest = NULL;
-    newObj->port = 0;
+    newObj->srcPort = 0;
+    newObj->destPort = 0;
     //Payload
     newObj->version = lsa->version;
     newObj->TTL = lsa->TTL;
@@ -141,7 +142,7 @@ LSA *LSAfromLSA(LSA *lsa)
     return newObj;
 }
 
-LSA *LSAfromBuffer(char *buf, ssize_t length)
+LSA *LSAfromBuffer(char *buf, ssize_t length, char *src, int srcPort)
 {
     unsigned int i;
     char *ptr;
@@ -150,7 +151,7 @@ LSA *LSAfromBuffer(char *buf, ssize_t length)
     uint32_t senderID, seqNo, numLink, numObj;
     length = length; //Not used
     version = *(uint8_t *)buf;
-    TTL = ntohs(*(uint8_t *)(buf + 1));
+    TTL = *(uint8_t *)(buf + 1);
     type = ntohs(*(uint16_t *)(buf + 2));
 
     senderID = ntohl(*(uint32_t *)(buf + 4));
@@ -159,6 +160,16 @@ LSA *LSAfromBuffer(char *buf, ssize_t length)
     numObj = ntohl(*(uint32_t *)(buf + 16));
 
     LSA *newObj = malloc(sizeof(LSA));
+    newObj->src=src;
+    newObj->srcPort=srcPort;
+    newObj->dest=NULL;
+    newObj->destPort=0;
+    //Meta
+    gettimeofday(&(newObj->timestamp), NULL);
+    newObj->hasAck = 0;
+    newObj->hasRetran = 0;
+    newObj->isDown = 0;
+    //Payload
     newObj->version = version;
     newObj->TTL = TTL;
     newObj->type = type;
@@ -184,7 +195,18 @@ LSA *LSAfromBuffer(char *buf, ssize_t length)
         insertNode(newObj->listObj, ptr);
         buf += strlen(buf) + 1;
     }
+    printLSA(newObj);
     return newObj;
+}
+
+void printLSA(LSA *lsa){
+    printf("==LSA==\n");
+    printf("src=%s:%d;dest=%s:%d\n", lsa->src, lsa->srcPort, lsa->dest, lsa->destPort);
+    printf("version=%d;TTL=%d;type=%d\n", lsa->version, lsa->TTL, lsa->type);
+    printf("senderID=%d;seqNo=%d\n", lsa->senderID, lsa->seqNo);
+    printf("numLink=%d;numObj=%d\n", lsa->numLink, lsa->numObj);
+    printf("hasAck=%d;hasRetran=%d;isDown=%d\n", lsa->hasAck, lsa->hasRetran, lsa->isDown);
+
 }
 
 void LSAtoBuffer(LSA *lsa, char *buffer, ssize_t *bufSize)

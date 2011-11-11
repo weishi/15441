@@ -41,7 +41,8 @@ void processConnectionHandler(connObj *connPtr)
     case UDP: {
         getConnObjReadBufferForRead(connPtr, &readBuf, &rSize);
         if(rSize > 0) {
-            LSA *incomingLSA = LSAfromBuffer(readBuf, rSize);
+            LSA *incomingLSA = LSAfromBuffer(readBuf, rSize,
+                    connPtr->src, connPtr->srcPort);
             removeConnObjReadSize(connPtr, rSize);
             if(newLSA == NULL) {
                 printf("Bad LSA packet...Skip\n");
@@ -79,6 +80,7 @@ void readConnectionHandler(connObj *connPtr)
             printf("Peer routers...\n");
             retSize = recvfrom(connFd, buf, size, 0,
                                (struct sockaddr *)&client, &clientLen);
+            connPtr->srcPort = ntohs(client.sin_port);
             ip = inet_ntoa(client.sin_addr);
             connPtr->src = malloc(strlen(ip) + 1);
             strcpy(connPtr->src, ip);
@@ -124,19 +126,20 @@ void writeConnectionHandler(connObj *connPtr)
         printf("Sending to Peer\n");
         struct sockaddr_in dest;
         DLL *list = getConnObjLSAList(connPtr);
-        getConnObjWriteBufferForWrite(connPtr, &buf, &size);
-        printf("Write buffer has %zu bytes free\n", size);
-        printf("Has %d UDP in queue\n", list->size);
         while(list->size > 0) {
+            getConnObjWriteBufferForWrite(connPtr, &buf, &size);
+            printf("Write buffer has %zu bytes free\n", size);
+            printf("Has %d UDP in queue\n", list->size);
             LSA *thisLSA = getNodeDataAt(list, 0);
+            printLSA(thisLSA);
             LSAtoBuffer(thisLSA, buf, &size);
-            printf("Ready to write %zu bytes of UDP to %s:%d...\n", 
-                    size, thisLSA->dest, thisLSA->port);
+            printf("Ready to write %zu bytes of UDP to %s:%d...\n",
+                   size, thisLSA->dest, thisLSA->destPort);
             //Prepare destination address/port
             memset(&dest, '\0', sizeof(dest));
             dest.sin_family = AF_INET;
             dest.sin_addr.s_addr = inet_addr(thisLSA->dest);
-            dest.sin_port = htons(thisLSA->port);
+            dest.sin_port = htons(thisLSA->destPort);
             retSize = sendto(connFd, buf, size, 0,
                              (struct sockaddr *)&dest, sizeof(dest));
             if(retSize == -1) {

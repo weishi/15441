@@ -31,6 +31,7 @@ typedef struct connObj {
     DLL *LSAList;
     enum connType type;
     char *src;
+    int srcPort;
 } connObj;
 
 

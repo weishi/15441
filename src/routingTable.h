@@ -71,7 +71,7 @@ int loadRoutingTable(routingTable *, unsigned int nodeID, char *, char *);
 routingEntry *parseRoutingLine(char *);
 routingEntry *getRoutingEntry(unsigned int);
 void removeRoutingEntry(unsigned int);
-routingEntry *getRoutingEntryByHost(char *);
+routingEntry *getRoutingEntryByHost(char *, int);
 routingEntry *getMyRoutingEntry();
 DLL *getLocalLSABuffer();
 

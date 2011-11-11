@@ -16,7 +16,8 @@
 typedef struct LSA {
     char *src;
     char *dest;
-    int port;
+    int srcPort;
+    int destPort;
     //Payload
     uint8_t version;
     uint8_t TTL;
@@ -35,7 +36,7 @@ typedef struct LSA {
 } LSA;
 
 /* Constructor */
-LSA *LSAfromBuffer(char *, ssize_t);
+LSA *LSAfromBuffer(char *, ssize_t, char *, int);
 LSA *LSAfromLSA(LSA *);
 LSA *headerLSAfromLSA(LSA *);
 LSA *newLSA(uint32_t, uint32_t);
@@ -67,4 +68,7 @@ uint8_t getLSATTL(LSA *lsa);
 
 void insertLSALink(LSA *, uint32_t);
 void insertLSAObj(LSA *, char *);
+
+
+void printLSA(LSA *lsa);
 #endif

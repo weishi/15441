@@ -176,7 +176,9 @@ void createPool(DLL *list, fd_set *readPool, fd_set *writePool, int *maxSocket)
         connPtr = getNodeDataAt(list, 1);
         connFd = getConnObjSocket(connPtr);
         FD_SET(connFd, readPool);
-        FD_SET(connFd, writePool);
+        if(!isEmptyConnObj(connPtr)) {
+            FD_SET(connFd, writePool);
+        }
         max = (connFd > max ) ? connFd : max;
         printf( "[%dUDP]", connFd);
         /* Add client socket */
