@@ -1,6 +1,6 @@
 default: clean OSPF
 
 OSPF:
-	@gcc -g OSPF.c -o ospf	
+	@gcc -g OSPF-test.c -o ospf	
 clean:
 	@rm -f *.o ospf
