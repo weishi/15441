@@ -20,10 +20,9 @@ unsigned fromID(unsigned nodeID){
   int i;
   int numNode = globalState->numNode;
   int* nodeList = globalState->nodeList;
-  int matrixSize= globalState->matrixSize;
-  for(i = 0; i < matrixSize; i+= numNode){
+  for(i = 0; i < numNode; i++){
     if(nodeList[i] == nodeID)
-      return i/numNode;
+      return i;
   }
   return -1;
 }
@@ -62,7 +61,7 @@ void doOSPF(){
 	  dist[v] = alt;
 	  previous[v] = u;
 	} else if(alt == dist[v])
-	  if(nodeList[u * numNodes] < nodeList[previous[v] * numNodes])
+	  if(nodeList[u] < nodeList[previous[v]])
 	    previous[v] = u;
       }
       if(dist[v] < minDist){
@@ -102,7 +101,7 @@ unsigned query(unsigned targetID){
   int u = fromID(targetID);
   while(path[u] != UNDEFINED){
     if(path[u] == globalState->rootIdx)
-      return globalState->nodeList[u * globalState->numNode];
+      return globalState->nodeList[u];
     u = path[u];
   }
   return -1;
@@ -112,8 +111,8 @@ int main(){
   int matrix1[4][4] = {{0, 1, 1, 0}, //1
 		       {1, 0, 0, 1}, //3
 		       {1, 0, 0, 1}, //2
-		       {0, 1, 1, 0}};//7
-  int nodeList1[16] = {1,1,1,1,3,3,3,3,2,2,2,2,7,7,7,7};
+		       {0, 1, 1, 0}};//7 
+  int nodeList1[4] = {1,3,2,7};
   int numNode = 4;
   int rootID = 1;
   updateShortestPath(matrix1[0], numNode, nodeList1, rootID);
@@ -124,16 +123,16 @@ int main(){
 		       {1,1,0,1}, //3
 		       {0,0,1,0}};//5
   int nodeList2[16] = {1,1,1,1,4,4,4,4,3,3,3,3,5,5,5,5};
-  updateShortestPath(matrix2[0], numNode, nodeList2, rootID);
-  printf("Matrix 2: Next hop from root to 5 is %d\n", query(5));
+//  updateShortestPath(matrix2[0], numNode, nodeList2, rootID);
+  //printf("Matrix 2: Next hop from root to 5 is %d\n", query(5));
 
   int matrix3[4][4] = {{0,1,1,1}, //1
 		       {1,0,1,1}, //4
 		       {1,1,0,1}, //3
 		       {1,1,1,0}};//5
   int nodeList3[16] = {1,1,1,1,4,4,4,4,3,3,3,3,5,5,5,5};
-  updateShortestPath(matrix3[0], numNode, nodeList3, rootID);
-  printf("Matrix 2: Next hop from root to 5 is %d\n", query(5));
+  //updateShortestPath(matrix3[0], numNode, nodeList3, rootID);
+ // printf("Matrix 2: Next hop from root to 5 is %d\n", query(5));
   
   return 0;
 }
