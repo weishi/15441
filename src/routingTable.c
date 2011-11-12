@@ -15,7 +15,7 @@ void freeRoutingEntry(void *data)
     free(re->host);
 }
 
-void newAdvertisement()
+void newAdvertisement(int triggered)
 {
     LSA *newAds = NULL;
     struct timeval curTime;
@@ -33,7 +33,7 @@ void newAdvertisement()
         printLSA(newAds);
         addLSAWithDest(getLocalLSABuffer(), newAds, 0);
         updateTime();
-    } else if(needAdv) {
+    } else if(needAdv || triggered) {
         incLSASeq(myEntry->lastLSA);
         newAds = headerLSAfromLSA(myEntry->lastLSA);
         fillLSAWithLink(newAds);
@@ -126,14 +126,18 @@ void updateRoutingTableFromLSA(LSA *lsa)
         setLSADest(ack, lsa->src, lsa->srcPort);
         addLSAtoBuffer(ack);
         if(isZero) {
-            //Remove routing entry. Flood
-            printf("isZero\n");
-            if(entry->distance == 1) {
-                entry->distance = -1;
+            if(entry->distance != 0) {
+                //Remove routing entry. Flood
+                printf("isZero\n");
+                if(entry->distance == -1 || entry->distance == 1) {
+                    entry->distance = -1;
+                } else {
+                    removeRoutingEntry(nodeID);
+                }
+                addLSAWithDest(getLocalLSABuffer(), lsa, getLastNodeID(lsa));
             } else {
-                removeRoutingEntry(nodeID);
+                printf("I'm not dead anymore. Ignore old news.\n");
             }
-            addLSAWithDest(getLocalLSABuffer(), lsa, getLastNodeID(lsa));
             freeLSA(lsa);
         } else if(isMine && isHigher) {
             printf("isMine & higher\n");
@@ -148,6 +152,8 @@ void updateRoutingTableFromLSA(LSA *lsa)
             printf("isLower\n");
             //neiggbor rebooted. Echo back his last LSA. No Flood
             LSA *backLSA = entry->lastLSA;
+            backLSA->isDown = 0;
+            backLSA->isExpired = 0;
             entry->distance = 1;
             addLSAWithOneDest(getLocalLSABuffer(), backLSA, backLSA->senderID);
             freeLSA(lsa);
@@ -165,10 +171,11 @@ void updateRoutingTableFromLSA(LSA *lsa)
                 newEntry->serverPort = 0;
                 newEntry->tRes = NULL;
                 newEntry->distance = 2;
+                insertNode(tRouting->table, newEntry);
             } else {
                 newEntry = entry;
-                if(entry->distance==-1){
-                    entry->distance=1;
+                if(entry->distance == -1) {
+                    entry->distance = 1;
                 }
             }
             newEntry->lastLSA = lsa;
@@ -190,7 +197,8 @@ void updateRoutingTableFromLSA(LSA *lsa)
             }
             freeLSA(floodLSA);
         } else {
-            printf("What kind of LSA is this?!\n");
+            printf("@@@Ignored@@@\n");
+            freeLSA(lsa);
         }
     }
 }
@@ -198,7 +206,7 @@ void updateRoutingTableFromLSA(LSA *lsa)
 void getLSAFromRoutingTable(DLL **list)
 {
     /* Add Advertisement LSA */
-    newAdvertisement();
+    newAdvertisement(0);
     /* Retran LSA without ACK */
     checkNeighborDown();
     /* Timeout old LSA */
@@ -227,7 +235,7 @@ void printRoutingTable()
         printf("[%d]Dist=%d;ACK=%d;",
                entry->nodeID, entry->distance, entry->ackPool->size);
         if(lsa != NULL) {
-            printf("Seq=%d;Link:", lsa->seqNo);
+            printf("Seq=%d;Exp=%d;Link:", lsa->seqNo, lsa->isExpired);
             for(j = 0; j < lsa->numLink; j++) {
                 printf("%d,", lsa->listLink[j]);
             }
@@ -377,7 +385,6 @@ routingEntry *getRoutingEntryByHost(char *host, int port)
     printf("Searching:%s:%d", host, port);
     for(i = 0; i < tRou->table->size; i++) {
         routingEntry *entry = getNodeDataAt(tRou->table, i);
-        printf("Got:%s:%d;\n", entry->host, entry->routingPort);
         if(entry->host != NULL &&
                 entry->routingPort == port &&
                 strcmp(entry->host, host) == 0) {
@@ -442,6 +449,7 @@ void insertLocalResource(char *objName, char *objPath)
 {
     routingEntry *entry = getMyRoutingEntry();
     insertResource(entry->tRes, objName, objPath);
+    newAdvertisement(1);
 }
 
 void addLSAtoBuffer(LSA *lsa)
@@ -464,10 +472,9 @@ void expireOldLSA()
         lsa = entry->lastLSA;
         if(lsa != NULL) {
             diffTime = curTime.tv_sec - (lsa->timestamp).tv_sec;
-            printf("ExpireOldLSA: Difftime=%ld\n", diffTime);
             if(diffTime >= tRouting->LSATimeout) {
                 printf("Expire node[%d]\n", entry->nodeID);
-                replaceLSA(&(entry->lastLSA), NULL);
+                entry->lastLSA->isExpired = 1;
             }
         }
     }
@@ -490,7 +497,6 @@ void checkNeighborDown()
             for(j = 0; j < ackPool->size; j++) {
                 lsa = getNodeDataAt(ackPool, j);
                 diffTime = curTime.tv_sec - lsa->timestamp.tv_sec;
-                printf("CheckNeighborDown: Difftime=%ld\n", diffTime);
                 needRetran = diffTime > tRouting->retranTimeout
                              && !hasLSARetran(lsa)
                              && diffTime < tRouting->neighborTimeout;
@@ -507,12 +513,12 @@ void checkNeighborDown()
                     //Clean up all queued ACK for this node
                     while(ackPool->size > 0) {
                         //Remove it from Outcoming Queue, if exists
-                        DLL *localList=getLocalLSABuffer();
-                        int k=0;
-                        for(k=0;k<localList->size;k++){
-                            LSA *lsa1=getNodeDataAt(localList, k);
-                            LSA *lsa2=getNodeDataAt(ackPool,0);
-                            if(compareLSA(lsa1, lsa2)==0){
+                        DLL *localList = getLocalLSABuffer();
+                        int k = 0;
+                        for(k = 0; k < localList->size; k++) {
+                            LSA *lsa1 = getNodeDataAt(localList, k);
+                            LSA *lsa2 = getNodeDataAt(ackPool, 0);
+                            if(compareLSA(lsa1, lsa2) == 0) {
                                 removeNodeAt(localList, k);
                                 break;
                             }
@@ -520,14 +526,14 @@ void checkNeighborDown()
                         removeNodeAt(ackPool, 0);
                     }
                     if(entry->lastLSA != NULL) {
-                        setLSADown(entry->lastLSA); //set TTL=0
+                        entry->lastLSA->isDown = 1;
                         LSA *downLSA = LSAfromLSA(entry->lastLSA);
+                        setLSADown(downLSA); //set TTL=0
                         addLSAWithDest(getLocalLSABuffer(), downLSA, entry->nodeID);
                         freeLSA(downLSA);
                     }
                     printf("Neighbor[%d] is down\n", entry->nodeID);
                 } else {
-                    printf("Neighbor[%d] is waiting for ACK\n", entry->nodeID);
                 }
             }
         }

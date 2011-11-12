@@ -79,7 +79,7 @@ void printRoutingTable();
 
 unsigned int getLastNodeID(LSA *);
 void updateTime();
-void newAdvertisement();
+void newAdvertisement(int);
 void expireOldLSA();
 void checkNeighborDown();
 

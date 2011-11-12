@@ -31,6 +31,7 @@ typedef struct LSA {
     struct timeval timestamp;
     int hasRetran;
     int isDown;
+    int isExpired;
 } LSA;
 
 /* Constructor */

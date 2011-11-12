@@ -50,6 +50,7 @@ LSA *newLSA(uint32_t senderID, uint32_t seqNo)
     gettimeofday(&(newObj->timestamp), NULL);
     newObj->hasRetran = 0;
     newObj->isDown = 0;
+    newObj->isExpired = 0;
     return newObj;
 
 }
@@ -128,6 +129,7 @@ LSA *headerLSAfromLSA(LSA *lsa)
     gettimeofday(&(newObj->timestamp), NULL);
     newObj->hasRetran = 0;
     newObj->isDown = 0;
+    newObj->isExpired = 0;
     return newObj;
 }
 
@@ -170,6 +172,7 @@ LSA *LSAfromBuffer(char *buf, ssize_t length, char *src, int srcPort)
     gettimeofday(&(newObj->timestamp), NULL);
     newObj->hasRetran = 0;
     newObj->isDown = 0;
+    newObj->isExpired = 0;
     //Payload
     newObj->version = version;
     newObj->TTL = TTL;
