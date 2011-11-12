@@ -112,5 +112,5 @@ void query(unsigned targetID, unsigned int* nextHop, int *distance){
     u = path[u];
   }
   //did not find a route 
-  *distance = INF;
+  *distance = -1;
 }
