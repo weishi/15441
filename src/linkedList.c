@@ -27,6 +27,7 @@ void freeList(DLL *list)
 DLL *copyList(DLL *list)
 {
     DLL *newList = malloc(sizeof(DLL));
+    initList(newList, list->compare, list->freeData, list->map, list->copyData);
     if(list != NULL) {
         int i = 0;
         while(i < list->size) {
@@ -44,7 +45,7 @@ void insertList(DLL *destList, DLL *srcList)
     if(srcList != NULL) {
         int i = 0;
         while(i < srcList->size ) {
-            void *data = getNodeDataAt(srcList, 0);
+            void *data = getNodeDataAt(srcList, i);
             void *newData = srcList->copyData(data);
             insertNode(destList, newData);
             i++;
@@ -106,7 +107,9 @@ void removeNode(DLL *list, Node *deadNode)
         ref->prev->next = ref->next;
         ref->next->prev = ref->prev;
     }
-    (*list).freeData(ref->data);
+    if(list->freeData != NULL) {
+        (*list).freeData(ref->data);
+    }
     free(ref);
     list->size--;
 }

@@ -1,18 +1,23 @@
 #include "LSA.h"
 
-
 int compareLSA(void *data1, void *data2)
 {
-    data1 = data1;
-    data2 = data2;
-    return 0;
+    LSA *lsa1 = data1;
+    LSA *lsa2 = data2;
+    int isSame = lsa1->senderID == lsa2->senderID &&
+                 lsa1->seqNo == lsa2->seqNo &&
+                 lsa1->TTL == lsa2->TTL &&
+                 lsa1->type == lsa2->type;
+
+    return isSame;
 }
 
 void freeLSA(void *data)
 {
     LSA *lsa = (LSA *)data;
-    free(lsa->dest);
     free(lsa->src);
+    free(lsa->dest);
+    free(lsa->listLink);
     freeList(lsa->listObj);
     free(lsa);
 }
@@ -27,13 +32,25 @@ void *copyLSA(void *data)
 LSA *newLSA(uint32_t senderID, uint32_t seqNo)
 {
     LSA *newObj = malloc(sizeof(LSA));
+    newObj->src = NULL;
     newObj->dest = NULL;
-    newObj->dest = NULL;
+    newObj->srcPort = 0;
+    newObj->destPort = 0;
+    //Payload
     newObj->version = 1;
     newObj->TTL = 32;
     newObj->senderID = senderID;
     newObj->seqNo = seqNo;
     newObj->type = 0;
+    newObj->numLink = 0;
+    newObj->numObj = 0;
+    newObj->listLink = NULL;
+    newObj->listObj = NULL;
+    //Meta
+    gettimeofday(&(newObj->timestamp), NULL);
+    newObj->hasRetran = 0;
+    newObj->isDown = 0;
+    newObj->isExpired = 0;
     return newObj;
 
 }
@@ -53,16 +70,6 @@ void setLSAAck(LSA *lsa)
     lsa->type = 1;
 }
 
-int hasLSAAck(LSA *lsa)
-{
-    return lsa->hasACK;
-}
-
-void gotLSAAck(LSA *lsa)
-{
-    lsa->hasACK = 1;
-}
-
 int isLSAAck(LSA *lsa)
 {
     return lsa->type == 1;
@@ -73,6 +80,16 @@ void decLSATTL(LSA *lsa)
     lsa->TTL--;
 }
 
+int isLSADown(LSA *lsa)
+{
+    return lsa->isDown;
+}
+
+void setLSADown(LSA *lsa)
+{
+    lsa->TTL = 0;
+    lsa->isDown = 1;
+}
 uint8_t getLSATTL(LSA *lsa)
 {
     return lsa->TTL;
@@ -80,7 +97,8 @@ uint8_t getLSATTL(LSA *lsa)
 
 void setLSADest(LSA *lsa, char *dest, int port)
 {
-    lsa->port = port;
+
+    lsa->destPort = port;
     lsa->dest = malloc(strlen(dest) + 1);
     strcpy(lsa->dest, dest);
 }
@@ -88,9 +106,16 @@ void setLSADest(LSA *lsa, char *dest, int port)
 LSA *headerLSAfromLSA(LSA *lsa)
 {
     LSA *newObj = malloc(sizeof(LSA));
+    if(lsa->src == NULL) {
+        newObj->src = NULL;
+    } else {
+        newObj->src = malloc(strlen(lsa->src) + 1);
+        strcpy(newObj->src, lsa->src);
+    }
     newObj->dest = NULL;
-    newObj->port = 0;
-    newObj->src = lsa->src;
+    newObj->srcPort = lsa->srcPort;
+    newObj->destPort = 0;
+    //Payload
     newObj->version = lsa->version;
     newObj->TTL = lsa->TTL;
     newObj->type = lsa->type;
@@ -100,6 +125,11 @@ LSA *headerLSAfromLSA(LSA *lsa)
     newObj->numObj = 0;
     newObj->listLink = NULL;
     newObj->listObj = NULL;
+    //Meta
+    gettimeofday(&(newObj->timestamp), NULL);
+    newObj->hasRetran = 0;
+    newObj->isDown = 0;
+    newObj->isExpired = 0;
     return newObj;
 }
 
@@ -116,7 +146,7 @@ LSA *LSAfromLSA(LSA *lsa)
     return newObj;
 }
 
-LSA *LSAfromBuffer(char *buf, ssize_t length)
+LSA *LSAfromBuffer(char *buf, ssize_t length, char *src, int srcPort)
 {
     unsigned int i;
     char *ptr;
@@ -125,7 +155,7 @@ LSA *LSAfromBuffer(char *buf, ssize_t length)
     uint32_t senderID, seqNo, numLink, numObj;
     length = length; //Not used
     version = *(uint8_t *)buf;
-    TTL = ntohs(*(uint8_t *)(buf + 1));
+    TTL = *(uint8_t *)(buf + 1);
     type = ntohs(*(uint16_t *)(buf + 2));
 
     senderID = ntohl(*(uint32_t *)(buf + 4));
@@ -134,6 +164,16 @@ LSA *LSAfromBuffer(char *buf, ssize_t length)
     numObj = ntohl(*(uint32_t *)(buf + 16));
 
     LSA *newObj = malloc(sizeof(LSA));
+    newObj->src = src;
+    newObj->srcPort = srcPort;
+    newObj->dest = NULL;
+    newObj->destPort = 0;
+    //Meta
+    gettimeofday(&(newObj->timestamp), NULL);
+    newObj->hasRetran = 0;
+    newObj->isDown = 0;
+    newObj->isExpired = 0;
+    //Payload
     newObj->version = version;
     newObj->TTL = TTL;
     newObj->type = type;
@@ -141,7 +181,6 @@ LSA *LSAfromBuffer(char *buf, ssize_t length)
     newObj->seqNo = seqNo;
     newObj->numLink = numLink;
     newObj->numObj = numObj;
-    gettimeofday(&(newObj->timestamp), NULL);
     /* Get node ID */
     newObj->listLink = malloc(sizeof(uint32_t) * numLink);
     buf = buf + 20;
@@ -159,19 +198,28 @@ LSA *LSAfromBuffer(char *buf, ssize_t length)
         insertNode(newObj->listObj, ptr);
         buf += strlen(buf) + 1;
     }
+    printLSA(newObj);
     return newObj;
 }
 
-void LSAtoBuffer(LSA *lsa, char **buf, ssize_t *bufSize)
+void printLSA(LSA *lsa)
 {
-    int size = 20 + lsa->numLink * sizeof(uint32_t);
+    printf("==LSA== ");
+    printf("src=%s:%d;dest=%s:%d;", lsa->src, lsa->srcPort, lsa->dest, lsa->destPort);
+    printf("version=%d;TTL=%d;type=%d;", lsa->version, lsa->TTL, lsa->type);
+    printf("senderID=%d;seqNo=%d;", lsa->senderID, lsa->seqNo);
+    printf("numLink=%d;numObj=%d;", lsa->numLink, lsa->numObj);
+    printf("hasRetran=%d;isDown=%d", lsa->hasRetran, lsa->isDown);
+
+}
+
+void LSAtoBuffer(LSA *lsa, char *buffer, ssize_t *bufSize)
+{
     unsigned int i;
-    char *ptr;
     uint16_t val16;
     uint32_t val32;
-    char *buffer = malloc(size);
-    *buf = NULL;
-    *bufSize = 0;
+    ssize_t packetSize;
+    char *ptr;
     memcpy(buffer, &(lsa->version), 1);
     memcpy(buffer + 1, &(lsa->TTL), 1);
     val16 = htons(lsa->type);
@@ -193,20 +241,25 @@ void LSAtoBuffer(LSA *lsa, char **buf, ssize_t *bufSize)
 
     for(i = 0; i < lsa->numObj; i++) {
         char *objPtr = getNodeDataAt(lsa->listObj, i);
-        size = strlen(objPtr) + 1;
-        buffer = realloc(buffer, ptr - buffer + size);
         strcpy(ptr, objPtr);
-        ptr += size;
+        ptr += strlen(objPtr) + 1;;
     }
-    *buf = buffer;
-    *bufSize = ptr - buffer;
+    printLSA(lsa);
+    packetSize = ptr - buffer;
+    if(packetSize > *bufSize) {
+        printf("Packet too big, %zu / %zu\n", packetSize, *bufSize);
+        *bufSize = -1;
+    } else {
+        printf("Size: %zu bytes\n", packetSize);
+        *bufSize = packetSize;
+    }
 }
 
 void insertLSALink(LSA *lsa, uint32_t nodeID)
 {
     uint32_t numLink = lsa->numLink;
     lsa->listLink = realloc(lsa->listLink, sizeof(uint32_t) * (numLink + 1));
-    lsa->listLink[numLink+1] = nodeID;
+    lsa->listLink[numLink] = nodeID;
     lsa->numLink++;
 }
 
@@ -216,13 +269,21 @@ void insertLSAObj(LSA *lsa, char *objName)
         lsa->listObj = malloc(sizeof(DLL));
         initList(lsa->listObj, compareString, freeString, NULL, copyString);
     }
-    
+
     insertNode(lsa->listObj, lsa->listObj->copyData(objName));
     lsa->numObj++;
 
 }
 
 
+int hasLSARetran(LSA *lsa)
+{
+    return lsa->hasRetran;
+}
+void setLSARetran(LSA *lsa)
+{
+    lsa->hasRetran = 1;
+}
 
 
 

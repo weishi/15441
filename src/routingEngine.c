@@ -65,16 +65,17 @@ int listenSocket(routingEngine *engine, int routingFD, int localFD)
     int numReady;
     connObj *connPtr;
     DLL socketList;
-    struct timeval timeout;
-    timeout.tv_sec=1;
 
     fd_set readPool, writePool;
     initList(&socketList, compareConnObj, freeConnObj, mapConnObj, NULL);
     insertNode(&socketList, createConnObj(localFD, 0, TCP));
-    connPtr = createConnObj(routingFD, 0, UDP);
+    connPtr = createConnObj(routingFD, UDP_BUF_SIZE, UDP);
     setConnObjNonBlock(connPtr); //UDP nonblocking
     insertNode(&socketList, connPtr);
     while(1) {
+        struct timeval timeout;
+        timeout.tv_sec = 2;
+        timeout.tv_usec = 0;
         if(shutdownRouter != 0) {
             int retVal = shutdownRouter;
             shutdownRouter = 0;
@@ -86,9 +87,10 @@ int listenSocket(routingEngine *engine, int routingFD, int localFD)
         numReady = select(maxSocket + 1, &readPool, &writePool, NULL, &timeout);
         if(numReady < 0) {
             printf("Select Error\n");
-        } else if(numReady == 0 ) {
-            printf("Select Idle\n");
         } else {
+            if(numReady == 0 ) {
+                printf("Select Idle\n");
+            }
             handlePool(&socketList, &readPool, &writePool,  engine);
         }
     }
@@ -105,7 +107,6 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, routingEngine *e
         int listenFd;
         connObj *connPtr;
         /* Handle TCP connections */
-        printf( "HandlePool: Total Existing [%d]\n", numPool);
         for(i = 2; i < numPool; i++) {
             connPtr = getNodeDataAt(list, i);
             int connFd = getConnObjSocket(connPtr);
@@ -142,11 +143,10 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, routingEngine *e
             engine->readConnHandler(connPtr);
         }
         engine->processConnHandler(connPtr);
-        if(FD_ISSET(listenFd,writePool)) {
+        if(FD_ISSET(listenFd, writePool)) {
             printf( "Active UDP WR [%d] ", listenFd);
             engine->writeConnHandler(connPtr);
         }
-        printf( "\n");
         /* Remove closed connections from list */
         mapNode(list);
     }
@@ -174,6 +174,9 @@ void createPool(DLL *list, fd_set *readPool, fd_set *writePool, int *maxSocket)
         connPtr = getNodeDataAt(list, 1);
         connFd = getConnObjSocket(connPtr);
         FD_SET(connFd, readPool);
+        if(!isEmptyConnObj(connPtr)) {
+            FD_SET(connFd, writePool);
+        }
         max = (connFd > max ) ? connFd : max;
         printf( "[%dUDP]", connFd);
         /* Add client socket */
@@ -197,7 +200,7 @@ void createPool(DLL *list, fd_set *readPool, fd_set *writePool, int *maxSocket)
             i++;
             ref = ref->next;
         }
-        printf( " Max = %d\n", max);
+        printf( " Max = %d ...  ", max);
         *maxSocket = max;
     }
 }

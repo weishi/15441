@@ -30,6 +30,7 @@ typedef struct routingEntry {
     resourceTable *tRes;
     LSA *lastLSA;
     int distance;
+    DLL *ackPool;
 } routingEntry;
 
 int compareRoutingEntry(void *, void *);
@@ -63,7 +64,7 @@ void insertLocalResource(char *, char *);
 
 /* Called from connHandler */
 void updateRoutingTableFromLSA(LSA *);
-void getLSAFromRoutingTable(DLL *);
+void getLSAFromRoutingTable(DLL **);
 
 
 /* Private methods */
@@ -71,13 +72,17 @@ int loadRoutingTable(routingTable *, unsigned int nodeID, char *, char *);
 routingEntry *parseRoutingLine(char *);
 routingEntry *getRoutingEntry(unsigned int);
 void removeRoutingEntry(unsigned int);
-routingEntry *getRoutingEntryByHost(char *);
+routingEntry *getRoutingEntryByHost(char *, int);
 routingEntry *getMyRoutingEntry();
-DLL *getLocalList();
+DLL *getLocalLSABuffer();
+void printRoutingTable();
 
 unsigned int getLastNodeID(LSA *);
 void updateTime();
-void newAdvertisement(DLL *);
+void newAdvertisement(int);
+void expireOldLSA();
+void checkNeighborDown();
+
 void fillLSAWithLink(LSA *);
 void addLSAWithDest(DLL *, LSA *, unsigned int ignore);
 void addLSAWithOneDest(DLL *, LSA *, unsigned int destID);

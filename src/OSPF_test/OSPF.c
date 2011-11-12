@@ -71,6 +71,7 @@ void doOSPF(){
     }
     u = new_u;
   }
+  free(removedNodes);
 }
 
 //assumes caller deals with memory allocation of matrix and nodeList

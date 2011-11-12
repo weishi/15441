@@ -37,12 +37,7 @@ connObj *createConnObj(int connFd,
     newObj->isRead = 1;
     newObj->isWrite = 0;
     newObj->src = NULL;
-    if(type == UDP) {
-        newObj->LSAList = malloc(sizeof(DLL));
-        initList(newObj->LSAList, compareLSA, freeLSA, NULL, NULL);
-    } else {
-        newObj->LSAList = NULL;
-    }
+    newObj->LSAList = NULL;
     return newObj;
 }
 
@@ -124,7 +119,11 @@ int isFullConnObj(connObj *connPtr)
 
 int isEmptyConnObj(connObj *connPtr)
 {
-    return connPtr->curWriteSize == 0;
+    if(getConnObjType(connPtr) == TCP) {
+        return connPtr->curWriteSize == 0;
+    } else {
+        return connPtr->LSAList == NULL || connPtr->LSAList->size == 0;
+    }
 }
 
 int isReadConnObj(connObj *connPtr)
@@ -155,6 +154,7 @@ void setConnObjNonBlock(connObj *connPtr)
     fcntl(connPtr->connFd, F_SETFL, flag);
 }
 
-DLL *getConnObjLSAList(connObj *connPtr){
+DLL *getConnObjLSAList(connObj *connPtr)
+{
     return connPtr->LSAList;
 }

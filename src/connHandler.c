@@ -41,7 +41,8 @@ void processConnectionHandler(connObj *connPtr)
     case UDP: {
         getConnObjReadBufferForRead(connPtr, &readBuf, &rSize);
         if(rSize > 0) {
-            LSA *incomingLSA = LSAfromBuffer(readBuf, rSize);
+            LSA *incomingLSA = LSAfromBuffer(readBuf, rSize,
+                                             connPtr->src, connPtr->srcPort);
             removeConnObjReadSize(connPtr, rSize);
             if(newLSA == NULL) {
                 printf("Bad LSA packet...Skip\n");
@@ -50,7 +51,7 @@ void processConnectionHandler(connObj *connPtr)
                 updateRoutingTableFromLSA(incomingLSA);
             }
         }
-        getLSAFromRoutingTable(connPtr->LSAList);
+        getLSAFromRoutingTable(&(connPtr->LSAList));
         break;
     }
     default:
@@ -79,6 +80,7 @@ void readConnectionHandler(connObj *connPtr)
             printf("Peer routers...\n");
             retSize = recvfrom(connFd, buf, size, 0,
                                (struct sockaddr *)&client, &clientLen);
+            connPtr->srcPort = ntohs(client.sin_port);
             ip = inet_ntoa(client.sin_addr);
             connPtr->src = malloc(strlen(ip) + 1);
             strcpy(connPtr->src, ip);
@@ -112,34 +114,37 @@ void writeConnectionHandler(connObj *connPtr)
     char *buf;
     ssize_t size, retSize;
     int connFd = getConnObjSocket(connPtr);
-    printf("Ready to write %zu bytes...", size);
     switch(getConnObjType(connPtr)) {
     case TCP:
         getConnObjWriteBufferForRead(connPtr, &buf, &size);
+        printf("Ready to write %zu bytes...", size);
         printf("Sending to Flask");
         retSize = send(connFd, buf, size, 0);
         break;
     case UDP: {
         //Write as many as possible, until block
+        printf("Sending to Peer...\n");
         struct sockaddr_in dest;
         DLL *list = getConnObjLSAList(connPtr);
-        getConnObjWriteBufferForWrite(connPtr, &buf, &size);
         while(list->size > 0) {
+            printf("[%d]: ", list->size);
+            getConnObjWriteBufferForWrite(connPtr, &buf, &size);
             LSA *thisLSA = getNodeDataAt(list, 0);
-            LSAtoBuffer(thisLSA, &buf, &size);
+            LSAtoBuffer(thisLSA, buf, &size);
             //Prepare destination address/port
             memset(&dest, '\0', sizeof(dest));
             dest.sin_family = AF_INET;
             dest.sin_addr.s_addr = inet_addr(thisLSA->dest);
-            dest.sin_port = htons(thisLSA->port);
+            dest.sin_port = htons(thisLSA->destPort);
             retSize = sendto(connFd, buf, size, 0,
                              (struct sockaddr *)&dest, sizeof(dest));
+            removeNodeAt(list, 0);
+            if(isLSAAck(thisLSA)) {
+                freeLSA(thisLSA);
+            }
+            removeConnObjWriteSize(connPtr, size);
             if(retSize == -1) {
                 break;
-            } else {
-                printf("%d LSA left.\n", list->size);
-                removeNodeAt(list, 0);
-                removeConnObjWriteSize(connPtr, size);
             }
         }
         break;
@@ -164,7 +169,6 @@ void writeConnectionHandler(connObj *connPtr)
         removeConnObjWriteSize(connPtr, size);
         setConnObjClose(connPtr);
     } else {
-        printf("All Buffered LSA sent.\n");
     }
 
 }
