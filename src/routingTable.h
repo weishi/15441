@@ -30,6 +30,7 @@ typedef struct routingEntry {
     resourceTable *tRes;
     LSA *lastLSA;
     int distance;
+    DLL *ackPool;
 } routingEntry;
 
 int compareRoutingEntry(void *, void *);
@@ -74,6 +75,7 @@ void removeRoutingEntry(unsigned int);
 routingEntry *getRoutingEntryByHost(char *, int);
 routingEntry *getMyRoutingEntry();
 DLL *getLocalLSABuffer();
+void printRoutingTable();
 
 unsigned int getLastNodeID(LSA *);
 void updateTime();

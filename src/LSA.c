@@ -1,16 +1,23 @@
 #include "LSA.h"
 
-
 int compareLSA(void *data1, void *data2)
 {
-    data1 = data1;
-    data2 = data2;
-    return 0;
+    LSA *lsa1 = data1;
+    LSA *lsa2 = data2;
+    int isSame = lsa1->senderID == lsa2->senderID &&
+                 lsa1->seqNo == lsa2->seqNo &&
+                 lsa1->TTL == lsa2->TTL &&
+                 lsa1->type == lsa2->type;
+
+    return isSame;
 }
 
 void freeLSA(void *data)
 {
     LSA *lsa = (LSA *)data;
+    free(lsa->src);
+    free(lsa->dest);
+    free(lsa->listLink);
     freeList(lsa->listObj);
     free(lsa);
 }
@@ -41,7 +48,6 @@ LSA *newLSA(uint32_t senderID, uint32_t seqNo)
     newObj->listObj = NULL;
     //Meta
     gettimeofday(&(newObj->timestamp), NULL);
-    newObj->hasAck = 0;
     newObj->hasRetran = 0;
     newObj->isDown = 0;
     return newObj;
@@ -61,16 +67,6 @@ void incLSASeq(LSA *lsa)
 void setLSAAck(LSA *lsa)
 {
     lsa->type = 1;
-}
-
-int hasLSAAck(LSA *lsa)
-{
-    return lsa->hasAck;
-}
-
-void gotLSAAck(LSA *lsa)
-{
-    lsa->hasAck = 1;
 }
 
 int isLSAAck(LSA *lsa)
@@ -100,16 +96,23 @@ uint8_t getLSATTL(LSA *lsa)
 
 void setLSADest(LSA *lsa, char *dest, int port)
 {
+
     lsa->destPort = port;
-    lsa->dest = dest;
+    lsa->dest = malloc(strlen(dest) + 1);
+    strcpy(lsa->dest, dest);
 }
 
 LSA *headerLSAfromLSA(LSA *lsa)
 {
     LSA *newObj = malloc(sizeof(LSA));
-    newObj->src = lsa->src;
+    if(lsa->src == NULL) {
+        newObj->src = NULL;
+    } else {
+        newObj->src = malloc(strlen(lsa->src) + 1);
+        strcpy(newObj->src, lsa->src);
+    }
     newObj->dest = NULL;
-    newObj->srcPort = 0;
+    newObj->srcPort = lsa->srcPort;
     newObj->destPort = 0;
     //Payload
     newObj->version = lsa->version;
@@ -123,7 +126,6 @@ LSA *headerLSAfromLSA(LSA *lsa)
     newObj->listObj = NULL;
     //Meta
     gettimeofday(&(newObj->timestamp), NULL);
-    newObj->hasAck = 0;
     newObj->hasRetran = 0;
     newObj->isDown = 0;
     return newObj;
@@ -160,13 +162,12 @@ LSA *LSAfromBuffer(char *buf, ssize_t length, char *src, int srcPort)
     numObj = ntohl(*(uint32_t *)(buf + 16));
 
     LSA *newObj = malloc(sizeof(LSA));
-    newObj->src=src;
-    newObj->srcPort=srcPort;
-    newObj->dest=NULL;
-    newObj->destPort=0;
+    newObj->src = src;
+    newObj->srcPort = srcPort;
+    newObj->dest = NULL;
+    newObj->destPort = 0;
     //Meta
     gettimeofday(&(newObj->timestamp), NULL);
-    newObj->hasAck = 0;
     newObj->hasRetran = 0;
     newObj->isDown = 0;
     //Payload
@@ -177,7 +178,6 @@ LSA *LSAfromBuffer(char *buf, ssize_t length, char *src, int srcPort)
     newObj->seqNo = seqNo;
     newObj->numLink = numLink;
     newObj->numObj = numObj;
-    gettimeofday(&(newObj->timestamp), NULL);
     /* Get node ID */
     newObj->listLink = malloc(sizeof(uint32_t) * numLink);
     buf = buf + 20;
@@ -199,13 +199,14 @@ LSA *LSAfromBuffer(char *buf, ssize_t length, char *src, int srcPort)
     return newObj;
 }
 
-void printLSA(LSA *lsa){
-    printf("==LSA==\n");
-    printf("src=%s:%d;dest=%s:%d\n", lsa->src, lsa->srcPort, lsa->dest, lsa->destPort);
-    printf("version=%d;TTL=%d;type=%d\n", lsa->version, lsa->TTL, lsa->type);
-    printf("senderID=%d;seqNo=%d\n", lsa->senderID, lsa->seqNo);
-    printf("numLink=%d;numObj=%d\n", lsa->numLink, lsa->numObj);
-    printf("hasAck=%d;hasRetran=%d;isDown=%d\n", lsa->hasAck, lsa->hasRetran, lsa->isDown);
+void printLSA(LSA *lsa)
+{
+    printf("==LSA== ");
+    printf("src=%s:%d;dest=%s:%d;", lsa->src, lsa->srcPort, lsa->dest, lsa->destPort);
+    printf("version=%d;TTL=%d;type=%d;", lsa->version, lsa->TTL, lsa->type);
+    printf("senderID=%d;seqNo=%d;", lsa->senderID, lsa->seqNo);
+    printf("numLink=%d;numObj=%d;", lsa->numLink, lsa->numObj);
+    printf("hasRetran=%d;isDown=%d", lsa->hasRetran, lsa->isDown);
 
 }
 
@@ -240,12 +241,13 @@ void LSAtoBuffer(LSA *lsa, char *buffer, ssize_t *bufSize)
         strcpy(ptr, objPtr);
         ptr += strlen(objPtr) + 1;;
     }
+    printLSA(lsa);
     packetSize = ptr - buffer;
     if(packetSize > *bufSize) {
         printf("Packet too big, %zu / %zu\n", packetSize, *bufSize);
         *bufSize = -1;
     } else {
-        printf("Packet written to buffer: %zu bytes\n", packetSize);
+        printf("Size: %zu bytes\n", packetSize);
         *bufSize = packetSize;
     }
 }

@@ -107,7 +107,9 @@ void removeNode(DLL *list, Node *deadNode)
         ref->prev->next = ref->next;
         ref->next->prev = ref->prev;
     }
-    (*list).freeData(ref->data);
+    if(list->freeData != NULL) {
+        (*list).freeData(ref->data);
+    }
     free(ref);
     list->size--;
 }

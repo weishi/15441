@@ -12,7 +12,6 @@
 
 #include "linkedList.h"
 
-
 typedef struct LSA {
     char *src;
     char *dest;
@@ -30,7 +29,6 @@ typedef struct LSA {
     DLL *listObj;
     //Meta
     struct timeval timestamp;
-    int hasAck;
     int hasRetran;
     int isDown;
 } LSA;
@@ -56,8 +54,6 @@ int hasLSARetran(LSA *);
 void setLSARetran(LSA *);
 
 void setLSAAck(LSA *);
-int hasLSAAck(LSA *lsa);
-void gotLSAAck(LSA *lsa);
 int isLSAAck(LSA *);
 
 void setLSADown(LSA *lsa);

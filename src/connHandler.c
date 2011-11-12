@@ -42,7 +42,7 @@ void processConnectionHandler(connObj *connPtr)
         getConnObjReadBufferForRead(connPtr, &readBuf, &rSize);
         if(rSize > 0) {
             LSA *incomingLSA = LSAfromBuffer(readBuf, rSize,
-                    connPtr->src, connPtr->srcPort);
+                                             connPtr->src, connPtr->srcPort);
             removeConnObjReadSize(connPtr, rSize);
             if(newLSA == NULL) {
                 printf("Bad LSA packet...Skip\n");
@@ -123,18 +123,14 @@ void writeConnectionHandler(connObj *connPtr)
         break;
     case UDP: {
         //Write as many as possible, until block
-        printf("Sending to Peer\n");
+        printf("Sending to Peer...\n");
         struct sockaddr_in dest;
         DLL *list = getConnObjLSAList(connPtr);
         while(list->size > 0) {
+            printf("[%d]: ", list->size);
             getConnObjWriteBufferForWrite(connPtr, &buf, &size);
-            printf("Write buffer has %zu bytes free\n", size);
-            printf("Has %d UDP in queue\n", list->size);
             LSA *thisLSA = getNodeDataAt(list, 0);
-            printLSA(thisLSA);
             LSAtoBuffer(thisLSA, buf, &size);
-            printf("Ready to write %zu bytes of UDP to %s:%d...\n",
-                   size, thisLSA->dest, thisLSA->destPort);
             //Prepare destination address/port
             memset(&dest, '\0', sizeof(dest));
             dest.sin_family = AF_INET;
@@ -142,12 +138,13 @@ void writeConnectionHandler(connObj *connPtr)
             dest.sin_port = htons(thisLSA->destPort);
             retSize = sendto(connFd, buf, size, 0,
                              (struct sockaddr *)&dest, sizeof(dest));
+            removeNodeAt(list, 0);
+            if(isLSAAck(thisLSA)) {
+                freeLSA(thisLSA);
+            }
+            removeConnObjWriteSize(connPtr, size);
             if(retSize == -1) {
                 break;
-            } else {
-                printf("%d LSA left.\n", list->size);
-                removeNodeAt(list, 0);
-                removeConnObjWriteSize(connPtr, size);
             }
         }
         break;
@@ -172,7 +169,6 @@ void writeConnectionHandler(connObj *connPtr)
         removeConnObjWriteSize(connPtr, size);
         setConnObjClose(connPtr);
     } else {
-        printf("All Buffered LSA sent.\n");
     }
 
 }

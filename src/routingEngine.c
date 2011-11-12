@@ -74,7 +74,7 @@ int listenSocket(routingEngine *engine, int routingFD, int localFD)
     insertNode(&socketList, connPtr);
     while(1) {
         struct timeval timeout;
-        timeout.tv_sec = 1;
+        timeout.tv_sec = 2;
         timeout.tv_usec = 0;
         if(shutdownRouter != 0) {
             int retVal = shutdownRouter;
@@ -107,7 +107,6 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, routingEngine *e
         int listenFd;
         connObj *connPtr;
         /* Handle TCP connections */
-        printf( "HandlePool: Total Existing [%d]\n", numPool);
         for(i = 2; i < numPool; i++) {
             connPtr = getNodeDataAt(list, i);
             int connFd = getConnObjSocket(connPtr);
@@ -148,7 +147,6 @@ void handlePool(DLL *list, fd_set *readPool, fd_set *writePool, routingEngine *e
             printf( "Active UDP WR [%d] ", listenFd);
             engine->writeConnHandler(connPtr);
         }
-        printf( "\n");
         /* Remove closed connections from list */
         mapNode(list);
     }
@@ -202,7 +200,7 @@ void createPool(DLL *list, fd_set *readPool, fd_set *writePool, int *maxSocket)
             i++;
             ref = ref->next;
         }
-        printf( " Max = %d\n", max);
+        printf( " Max = %d ...  ", max);
         *maxSocket = max;
     }
 }
