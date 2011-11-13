@@ -14,7 +14,7 @@ import shutil
 app = Flask(__name__)
 UPLOAD_FOLDER = './static/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-Host = 'localhost'
+Host = 'unix33.andrew.cmu.edu'
 
 @app.route('/')
 def index():
@@ -26,7 +26,6 @@ def index():
 @app.route('/rd/<int:p>', methods=["GET"])
 def rd_getrd(p):
     obj=request.args['object']
-    print obj
     return getFile(p,obj)
 
 @app.route('/rd/<int:p>/<obj>', methods=["GET"])
@@ -61,12 +60,11 @@ def saveFile(fileHandle):
 
 def getFile(port,obj):
     msg='GETRD ' + str(len(obj)) + ' ' + obj
-    print msg 
     response=sendReq(port,msg)
-    print response
     if response.startswith('OK '):
         fileURL=response.split()[2]
-        return send_file(urllib.urlopen(fileURL))
+        return send_file(urllib.urlopen(fileURL), as_attachment=True,
+                         attachment_filename=obj)
     elif response.startswith('NOTFOUND '):
         return '404 Object not found'
     else:
