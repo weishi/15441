@@ -10,7 +10,7 @@ typedef struct shortestPathState{
   int *dist;
   unsigned int numNode;
   unsigned int rootID;
-  unsigned int rootIdx; //Index of the rootNode within the connection matrix
+  int rootIdx; //Index of the rootNode within the connection matrix
 } shortestPathState;
 
 

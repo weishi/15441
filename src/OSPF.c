@@ -106,7 +106,7 @@ void query(unsigned targetID, unsigned int *nextHop, int *distance)
         *distance = 0;
     }
     int dist = 0;
-    unsigned int *path = globalState->previous;
+    int *path = globalState->previous;
     int u = fromID(targetID);
     while(path[u] != UNDEFINED) {
         dist++;
