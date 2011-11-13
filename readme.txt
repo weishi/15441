@@ -6,9 +6,12 @@ The routing daemon is devided into the following components:
 
 Routing engine: handles the incoming connection at listening 
     socket and create socket for new connection.
+OSPF: implemented as Dijkstra's shortest path algorithm. RoutingTable
+    will pass in the full matrix representing the topology before it
+    queries for next hop.
 Routing table:
     store my and peer's information from configure file and advertisement.
-    Also has pointer to everyone's resource table.
+    Also handles all incoming LSA and operates based on LSA type
 Resource table:
     store my and peer's file information. 
 Flask handler:
@@ -29,4 +32,5 @@ If buffer is not empty, do
     Read data upto length bytes
     Throw away the rest, if any.
 
- 
+OSPF:
+    Dijkstra algorithm 

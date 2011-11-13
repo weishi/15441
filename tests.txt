@@ -2,8 +2,10 @@ Test methods
 
 + Initial Debug test
 
-    Use a telnet client to connect to server. Type some requests in terminal and
+    1) Use a telnet client to connect to server. Type some requests in terminal and
     see if the response is expected and eyeball the server log.
+    
+    2) Run two routing daemons and check for any segfaults and error
 
 + Correctness test
 
@@ -11,17 +13,22 @@ Test methods
     
     2) Use Chrome browser to run get object and add object. Check server/router log
 
+    3) Run some simple configuration of nodes, eg 3-node ring, 3 nodes in a line
+
 + Memory leak test
            
-    Run server with valgrind. Initial multiple connections from brower.
+    Run routing daemon with valgrind. Initial multiple GET/ADDFILE from brower.
     After a while kill siege and the server to see if there are **definitely lost**
     memory blocks.
                   
 + Evil test
 
-    Send crafted request that is really large > 8192.
+    Kill and reboot some of the daemons to see if sequnece number is catched up, 
+    and others correctly remove corresponding routing entry.
 
 + Stress test
                           
-    Multiple browser and try get/add file requests.
+    1) Multiple browser and try get/add file requests.
+    
+    2) Run 5-node ring. Kill random nodes and see if next hop changes.
 
