@@ -15,7 +15,7 @@
 typedef struct routingInfo {
     const char *host;
     int port;
-    const char *path;
+    char *path;
 } routingInfo;
 
 /* Routing Entry for DLL */

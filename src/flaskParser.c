@@ -48,6 +48,8 @@ int flaskGETResponse(char *objName, char *writeBuf, ssize_t *wSize)
         retSize = snprintf(writeBuf, *wSize,
                  "OK %zu %s", strlen(tmpbuf), tmpbuf);
     }
+    free(objName);
+    free(rInfo.path);
     if(retSize < *wSize) {
         *wSize = retSize;
         printf("%d bytes of response buffered.\n", retSize);
@@ -63,6 +65,7 @@ int flaskADDResponse(char *objName, char *objPath, char *writeBuf, ssize_t *wSiz
 {
     insertLocalResource(objName, objPath);
     int retSize = snprintf(writeBuf, *wSize, "OK 0");
+    free(objName);
     if(retSize < *wSize) {
         *wSize = retSize;
         return 1; //Write succeed.

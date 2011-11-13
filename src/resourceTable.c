@@ -84,8 +84,11 @@ char *getPathByName(resourceTable *tRes, char *objName)
     if(ref == NULL) {
         return NULL;
     } else {
+        char *localPath;
         resourceEntry *ret = (resourceEntry *)(ref->data);
-        return ret->path;
+        localPath=malloc(strlen(ret->path)+1);
+        strcpy(localPath, ret->path);
+        return localPath;
     }
 }
 

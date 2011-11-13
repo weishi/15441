@@ -131,17 +131,14 @@ void updateRoutingTableFromLSA(LSA *lsa)
         setLSADest(ack, lsa->src, lsa->srcPort);
         addLSAtoBuffer(ack);
         if(isZero) {
-            if(entry->distance != 0) {
+            printf("isZero...");
+            if(entry != NULL && entry->distance == 2) {
                 //Remove routing entry. Flood
-                printf("isZero\n");
-                if(entry->distance == -1 || entry->distance == 1) {
-                    entry->distance = -1;
-                } else {
-                    removeRoutingEntry(nodeID);
-                }
+                printf("Entry removed.\n");
+                removeRoutingEntry(nodeID);
                 addLSAWithDest(getLocalLSABuffer(), lsa, getLastNodeID(lsa));
             } else {
-                printf("I'm not dead anymore. Ignore old news.\n");
+                printf("None of my business.\n");
             }
             freeLSA(lsa);
         } else if(isMine && isHigher) {
@@ -159,7 +156,7 @@ void updateRoutingTableFromLSA(LSA *lsa)
             LSA *backLSA = entry->lastLSA;
             backLSA->isDown = 0;
             backLSA->isExpired = 0;
-            if(entry->distance == 1 || entry->distance == -1) {
+            if(entry->host != NULL && strcmp(entry->host, lsa->src) == 0 && entry->routingPort == lsa->srcPort) {
                 entry->distance = 1;
                 addLSAWithOneDest(getLocalLSABuffer(), backLSA, backLSA->senderID);
             }
@@ -444,10 +441,12 @@ int getRoutingInfo(char *objName, routingInfo *rInfo)
     }
     //Fill in information
     if(querySize > 0) {
+        char *remotePath = malloc(strlen(objName) + 64); // 64 is arbitrary
         routingEntry *entry = getRoutingEntry(nextID);
         rInfo->host = entry->host;
         rInfo->port = entry->serverPort;
-        rInfo->path = path;
+        sprintf(remotePath, "/rd/%d/%s", entry->localPort, objName);
+        rInfo->path = remotePath;
         found = 1;
     }
     free(nodeList);
