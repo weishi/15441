@@ -5,12 +5,12 @@
 //Structure that stores state of the graph
 typedef struct shortestPathState{
   int *matrix;
-  int *nodeList;
+  unsigned int *nodeList;
   int *previous; 
   int *dist;
-  unsigned numNode;
-  unsigned rootID;
-  unsigned rootIdx; //Index of the rootNode within the connection matrix
+  unsigned int numNode;
+  unsigned int rootID;
+  unsigned int rootIdx; //Index of the rootNode within the connection matrix
 } shortestPathState;
 
 

@@ -10,7 +10,7 @@
 
 #include "linkedList.h"
 #include "resourceTable.h"
-
+#include "OSPF.h"
 
 typedef struct routingInfo {
     const char *host;
@@ -89,4 +89,7 @@ void addLSAWithOneDest(DLL *, LSA *, unsigned int destID);
 
 void addLSAtoBuffer(LSA *);
 
+void setMatrixConnected(int *matrix, unsigned int *nodeList,
+                        int listSize,
+                        unsigned int node1, unsigned int node2);
 #endif

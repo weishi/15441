@@ -12,7 +12,12 @@ int compareRoutingEntry(void *data1, void *data2)
 void freeRoutingEntry(void *data)
 {
     routingEntry *re = (routingEntry *)data;
+    freeList(re->ackPool);
+    if(re->lastLSA != NULL) {
+        freeLSA(re->lastLSA);
+    }
     free(re->host);
+    free(re);
 }
 
 void newAdvertisement(int triggered)
@@ -154,8 +159,10 @@ void updateRoutingTableFromLSA(LSA *lsa)
             LSA *backLSA = entry->lastLSA;
             backLSA->isDown = 0;
             backLSA->isExpired = 0;
-            entry->distance = 1;
-            addLSAWithOneDest(getLocalLSABuffer(), backLSA, backLSA->senderID);
+            if(entry->distance == 1 || entry->distance == -1) {
+                entry->distance = 1;
+                addLSAWithOneDest(getLocalLSABuffer(), backLSA, backLSA->senderID);
+            }
             freeLSA(lsa);
         } else if(isNew) {
             //Make new routing entry. Flood
@@ -171,6 +178,8 @@ void updateRoutingTableFromLSA(LSA *lsa)
                 newEntry->serverPort = 0;
                 newEntry->tRes = NULL;
                 newEntry->distance = 2;
+                newEntry->ackPool = malloc(sizeof(DLL));
+                initList(newEntry->ackPool, compareLSA, freeLSA, NULL, NULL);
                 insertNode(tRouting->table, newEntry);
             } else {
                 newEntry = entry;
@@ -358,24 +367,111 @@ routingEntry *parseRoutingLine(char *line)
 int getRoutingInfo(char *objName, routingInfo *rInfo)
 {
     routingTable *tRou = tRouting;
+    DLL *table = tRou->table;
     int i = 0;
+    unsigned int j = 0;
+    int nodes = 0;
+    int querySize = 0;
+    unsigned int *nodeList;
+    unsigned int *queryList;
+    int *resultList;
+    int *matrix;
     int minDistance = INT_MAX;
+    unsigned int nextID;
     char *path;
     int found = 0;
-    for(i = 0; i < tRou->table->size; i++) {
-        routingEntry *entry = getNodeDataAt(tRou->table, i);
-        path = getPathByName(entry->tRes, objName);
-        if(path != NULL) {
-            found = 1;
-            if(minDistance > entry->distance) {
+    //Try local
+    for(i = 0; i < table->size; i++) {
+        routingEntry *entry = getNodeDataAt(table, i);
+        if(entry->distance == 0 ) {
+            path = getPathByName(entry->tRes, objName);
+            if(path != NULL) {
                 rInfo->host = entry->host;
                 rInfo->port = entry->serverPort;
                 rInfo->path = path;
-                minDistance = entry->distance;
+                return 1;
             }
         }
     }
+    //Update OSPF
+    nodeList = malloc(sizeof(unsigned int) * table->size);
+    for(i = 0; i < table->size; i++) {
+        routingEntry *entry = getNodeDataAt(tRou->table, i);
+        if(entry->distance >= 0 &&
+                entry->lastLSA != NULL &&
+                entry->lastLSA->isDown == 0 &&
+                entry->lastLSA->isExpired == 0) {
+            nodeList[nodes++] = entry->nodeID;
+        }
+    }
+    matrix = calloc(sizeof(int) * nodes * nodes, 1);
+    for(i = 0; i < nodes; i++) {
+        unsigned int nodeID = nodeList[i];
+        routingEntry *entry = getRoutingEntry(nodeID);
+        setMatrixConnected(matrix, nodeList, nodes, nodeID, nodeID);
+        for(j = 0; j < entry->lastLSA->numLink; j++) {
+            setMatrixConnected(matrix, nodeList, nodes,
+                               nodeID, entry->lastLSA->listLink[j]);
+        }
+    }
+    updateShortestPath(matrix, nodes, nodeList,
+                       getMyRoutingEntry()->nodeID);
+    free(matrix);
+    //Query
+
+    queryList = malloc(sizeof(unsigned int) * nodes);
+    resultList = malloc(sizeof(int) * nodes);
+    querySize = 0;
+    for(i = 0; i < nodes; i++) {
+        unsigned int nodeID = nodeList[i];
+        routingEntry *entry = getRoutingEntry(nodeID);
+        if(searchList(entry->lastLSA->listObj, objName) != NULL) {
+            queryList[querySize++] = entry->nodeID;
+        }
+    }
+    for(i = 0; i < querySize; i++) {
+        query(queryList[i], &queryList[i], &resultList[i]);
+    }
+    for(i = 0; i < querySize; i++) {
+        if(resultList[i] < minDistance) {
+            minDistance = resultList[i];
+            nextID = queryList[i];
+        } else if(resultList[i] == minDistance) {
+            if(nextID < queryList[i]) {
+                nextID = queryList[i];
+            }
+        }
+    }
+    //Fill in information
+    if(querySize > 0) {
+        routingEntry *entry = getRoutingEntry(nextID);
+        rInfo->host = entry->host;
+        rInfo->port = entry->serverPort;
+        rInfo->path = path;
+        found = 1;
+    }
+    free(nodeList);
+    free(queryList);
+    free(resultList);
     return found;
+}
+
+void setMatrixConnected(int *matrix, unsigned int *nodeList,
+                        int listSize,
+                        unsigned int node1, unsigned int node2)
+{
+    int idx1, idx2;
+    int i;
+    for(i = 0; i < listSize; i++) {
+        if(nodeList[i] == node1) {
+            idx1 = i;
+        }
+        if(nodeList[i] == node2) {
+            idx2 = i;
+        }
+    }
+    matrix[idx1 *listSize + idx2] = 1;
+    matrix[idx2 *listSize + idx1] = 1;
 }
 
 routingEntry *getRoutingEntryByHost(char *host, int port)
