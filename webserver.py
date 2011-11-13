@@ -14,7 +14,7 @@ import shutil
 app = Flask(__name__)
 UPLOAD_FOLDER = './static/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-Host = 'unix33.andrew.cmu.edu'
+Host = '127.0.0.1'
 
 @app.route('/')
 def index():
