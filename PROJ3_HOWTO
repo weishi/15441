@@ -1,0 +1,59 @@
+SPIFFY ROUTER
+-------------
+
+The Spiffy Router (tm) emulates limited bandwidth links between your nodes.
+To use it, you must do two things:
+
+  a)  call spiffy_sendto and spiffy_recvfrom in your code
+      instead of recvfrom and sendto
+
+  b)  setenv SPIFFY_ROUTER ipadress:port
+      before you run your program
+
+If you don't want to use the spiffy router, just don't set the environment
+variable, and the packets will be sent out normally.  An example spiffy router
+setting:
+
+  setenv SPIFFY_ROUTER 127.0.0.1:32232
+
+  (localhost, port 32232).  Please run the spiffy router on a port in your group's
+range to ensure that you don't bump into someone else's programs!
+
+DEBUGGING SUPPORT
+-----------------
+
+For your debugging use, we've provided a basic debug library in debug.{c,h}.  To use
+the debugging macros, start your program with
+
+ peer  -d <##>
+
+where ## specifies the debugging bits you'd like to have enabled.  Use
+
+  peer -d list
+
+to get a list of debug flags.  See debug.h to add your own flags.
+
+If you rewrite the command line parsing code but want to keep the debugging facility,
+see the initialization code in bt_parse.c to see how you initialize the debug code.
+It's very simple.
+
+
+INPUT BUFFER
+------------
+
+We've supplied some input buffering code to handle the terminal input
+from the user.  It should just work.  Let us know if you encounter
+any problems with it.
+
+MANAGING CHUNKS
+---------------
+
+We've provided the make-chunks program to create chunk hashes from an input
+file. The chunk hashes are 40 byte ascii representation of SHA hash. You can
+run 'make-chunks <input-file>' to get the chunk hashes of a file.
+
+You can use the 'ascii2hex' function in chunk.c to convert ascii hashes into
+binary chunk hash of 20 bytes. 
+
+To generate hash of a chunk, you should use 'shahash' function in chunk.c.
+
