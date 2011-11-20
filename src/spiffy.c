@@ -48,7 +48,7 @@ ssize_t spiffy_sendto(int s, const void *msg, size_t len, int flags, const struc
 	return retVal;
 }
 
-int spiffy_recvfrom (int socket, void *buffer, size_t size, int flags, struct sockaddr *addr, socklen_t *lengthPtr) {
+int spiffy_recvfrom (int sock, void *buffer, size_t size, int flags, struct sockaddr *addr, socklen_t *lengthPtr) {
 
 	char *newbuf = NULL;
 	spiffy_header s_head;
@@ -61,7 +61,7 @@ int spiffy_recvfrom (int socket, void *buffer, size_t size, int flags, struct so
 
 	if (!giSpiffyEnabled) {
 		printf("Spiffy not enabled, using normal recvfrom\n");
-		return recvfrom(socket, buffer, size, flags, addr, lengthPtr);
+		return recvfrom(sock, buffer, size, flags, addr, lengthPtr);
 	}
 
 	newbuf = (char *) malloc(size + sizeof(spiffy_header));
@@ -70,7 +70,7 @@ int spiffy_recvfrom (int socket, void *buffer, size_t size, int flags, struct so
 		return -1; 
 	}
 
-	retVal = recvfrom(socket, newbuf, size + sizeof(spiffy_header), flags, (struct sockaddr *) &sRecvAddr, lengthPtr);
+	retVal = recvfrom(sock, newbuf, size + sizeof(spiffy_header), flags, (struct sockaddr *) &sRecvAddr, lengthPtr);
 	if (retVal > 0) {
 		memcpy(&s_head, newbuf, sizeof(spiffy_header));
 		memcpy(buffer, newbuf + sizeof(spiffy_header), size);
@@ -91,7 +91,7 @@ int spiffy_init (long lNodeID, const struct sockaddr *addr, socklen_t addrlen) {
 
 	char *cSpiffyName = NULL;
 	char *cColon = NULL;
-
+    addrlen=addrlen;
 	cSpiffyName = getenv("SPIFFY_ROUTER");
 	if (!cSpiffyName) {
 		fprintf(stderr, "Returning from spiffy_init: no SPIFFY_ROUTER environment set.\n");
@@ -118,7 +118,7 @@ int spiffy_init (long lNodeID, const struct sockaddr *addr, socklen_t addrlen) {
 	gsSrcPort = ((struct sockaddr_in *)addr)->sin_port;
 
 	fprintf(stderr, "Spiffy local stuff:  %08x:%d\n",
-		glSrcAddr, ntohs(gsSrcPort));
+		(unsigned int)glSrcAddr, ntohs(gsSrcPort));
 	fprintf(stderr, "Spiffy setup complete.  %s:%d\nDelete this line after testing.\n",
 		inet_ntoa(gsSpiffyRouter.sin_addr), ntohs(gsSpiffyRouter.sin_port));
 	return 0;

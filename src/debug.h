@@ -4,10 +4,12 @@
 #include <stdio.h>  /* for perror */
 #include <sys/types.h>
 
+
+
 #ifdef DEBUG
 extern unsigned int debug;
 #define DPRINTF(level, fmt, args...) \
-        do { if (debug & (level)) fprintf(stderr, fmt , ##args ); } while(0)
+        do { if (debug & (level)) fprintf(stdout, fmt , ##args ); } while(0)
 #define DEBUG_PERROR(errmsg) \
         do { if (debug & DEBUG_ERRS) perror(errmsg); } while(0)
 #else
