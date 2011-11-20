@@ -1,6 +1,8 @@
 #ifndef PACKET_H
 #define PACKET_H
 
+#define MAX_HASH_PER_PACKET ((1500-20)/20)
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -9,49 +11,54 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 
+#include "queue.h"
+#include "chunkList.h"
 
-#include "linkedList.h"
+extern chunkList masterChunk;
+extern chunkList getChunk;
+extern chunkList hasChunk;
 
 typedef struct Packet {
-    char *src;
-    char *dest;
-    int srcPort;
-    int destPort;
-    struct timeval timestamp;
-    //Header
-    uint16_t magicNum;
-    uint8_t version;
-    uint8_t type;
-    uint16_t headerLength;
-    uint16_t packetLengh;
-    uint32_t seqNo;
-    uint32_t ackNo;
-    //Payload(IHAVE/WHOHAS)
-    uint32_t numObj;
-    DLL *listObj;
-    //Payload(DATA)
-    char *data;
+    struct sockaddr_in src;
+    uint8_t payload[1500];
 } Packet;
 
 /* Constructor */
-Packet *PacketfromBuffer(char *, ssize_t, char *, int);
-Packet *PacketfromPacket(Packet *);
-Packet *headerPacketfromPacket(Packet *);
-Packet *newPacket(uint32_t, uint32_t);
+Packet *newPacketFromBuffer(char *);
+Packet *newPacketDefault();
+void newPacketWHOHAS(queue *);
+void newPacketGET(Packet *,queue *);
+Packet * newPacketSingleGET(uint8_t*);
+Packet *newPacketIHAVE(Packet *);
 
-int comparePacket(void *data1, void *data2);
 void freePacket(void *data);
-void *copyPacket(void *data);
 
+int verifyPacket(Packet *);
 void PackettoBuffer(Packet *, char *, ssize_t*);
 
-void replacePacket(Packet **, Packet *);
 /* Getters and Setters */
+uint16_t getPacketSize(Packet *pkt);
+uint16_t getPacketMagic(Packet *pkt);
+uint8_t getPacketVersion(Packet *pkt);
+uint8_t getPacketType(Packet *pkt);
+uint8_t getPacketNumHash(Packet *pkt);
+uint8_t *getPacketHash(Packet *pkt, int);
+
+void setPacketType(Packet *pkt, char *);
+void setPacketSize(Packet *pkt, uint16_t);
+void incPacketSize(Packet *pkt, uint16_t);
+
 void incPacketSeq(Packet *);
 void setPacketDest(Packet *, char*, int);
 
-void insertPacketLink(Packet *, uint32_t);
-void insertPacketObj(Packet *, char *);
+void insertPacketData(Packet *, char *);
+void insertPacketHash(Packet *, uint8_t *);
+
+/* Hash related methods */
+
+int searchHash(uint8_t *hash, chunkList *chunkPool);
+int sameHash(uint8_t *hash1, uint8_t *hash2, int size);
+
 
 
 #endif

@@ -16,10 +16,12 @@ OBJS+=spiffy.o
 OBJS+=debug.o
 OBJS+=input_buffer.o
 OBJS+=chunk.o
+OBJS+=sha.o
+
 OBJS+=window.o
 OBJS+=connPool.o
 OBJS+=queue.o
-OBJS+=sha.o
+OBJS+=packet.o
 
 BINS = peer make-chunks
 

@@ -7,6 +7,8 @@ typedef struct connUp{
 
 
 typedef struct connDown{
+    queue getQueue;
+    queue ackQueue;
 }connDown;
 
 

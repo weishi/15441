@@ -3,7 +3,6 @@
 
 #define MAX_NUM_CHUNK 1024
 #define MAX_NUM_PEER 1024
-#define SHA1_HASH_SIZE 20
 #define MAX_LINE_SIZE 1024
 
 #include <sys/types.h>
@@ -22,24 +21,8 @@
 
 #include "window.h"
 #include "connPool.h"
-
-enum chunkType{
-    MASTER,
-    GET,
-    HAS,
-};
-
-typedef struct chunkLine{
-    int seq;
-    uint8_t hash[SHA1_HASH_SIZE];
-}chunkLine;
-
-typedef struct chunkList{
-	enum chunkType type;
-	int numChunk;
-	chunkLine list[MAX_NUM_CHUNK];
-    FILE *filePtr;//Master input or GET output
-}chunkList;
+#include "chunkList.h"
+#include "packet.h"
 
 typedef struct peerList_t{
     int peerID;
@@ -47,20 +30,29 @@ typedef struct peerList_t{
     struct sockaddr_in addr;
 }peerList_t;
 
-/* Chunk */
-chunkList masterChunk;
-chunkList hasChunk;
-chunkList getChunk;
+typedef struct peerInfo_t{
+    int numPeer;
+    peerList_t peerList[MAX_NUM_PEER];
+}peerInfo_t;
 
-peerList_t peerList[MAX_NUM_PEER];
+peerInfo_t peerInfo;
+
+extern chunkList masterChunk;
+extern chunkList hasChunk;
+extern chunkList getChunk;
+
 
 /* Connection */
+queue *nonCongestQueue;//For WHOHAS,IHAVE
+
 int maxConn;
 connUp uploadPool[MAX_NUM_PEER];
-connDown downlaodPool[MAX_NUM_PEER];
+connDown downloadPool[MAX_NUM_PEER];
 
 void init(bt_config_t *);
 void fillChunkList(chunkList *, enum chunkType, char *);
 void fillPeerList(bt_config_t *);
 
+void handlePacket(Packet *);
+int searchPeer(struct sockaddr_in *);
 #endif
