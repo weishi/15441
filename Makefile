@@ -28,10 +28,13 @@ BINS = peer make-chunks
 $(SOURCE)/%.o: %.c
 	$(build-cmd)
 
-default: peer 
+default: peer clean-o 
 
 peer: $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $@ $(LDFLAGS)
+
+clean-o:
+	rm -f *.o
 
 make-chunks: $(MK_CHUNK_OBJS)
 	$(CC) $(CFLAGS) $(MK_CHUNK_OBJS) -o $@ $(LDFLAGS)

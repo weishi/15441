@@ -136,7 +136,7 @@ void handlePacket(Packet *pkt)
         }
         case 1: { //IHAVE
             int peerIndex = searchPeer(&(pkt->src));
-            int peerID=peerInfo.peerList[peerIndex].peerID;
+            int peerID = peerInfo.peerList[peerIndex].peerID;
             newPacketGET(pkt, &(downloadPool[peerID].getQueue));
             break;
         }
@@ -188,7 +188,7 @@ void process_inbound_udp(int sock)
            buf);
 
     Packet *newPkt = newPacketFromBuffer(buf);
-    memcpy(newPkt->src, from, fromlen);
+    memcpy(&(newPkt->src), &from, fromlen);
     handlePacket(newPkt);
 
 }
@@ -199,8 +199,8 @@ void process_get(char *chunkfile, char *outputfile)
     printf("Handle GET (%s, %s)\n", chunkfile, outputfile);
 
     fillChunkList(&getChunk, GET, chunkfile);
-    if((getChunk.filePtr = fopen(filename, "r")) == NULL) {
-        fprintf(stderr, "Open file %s failed\n", filename);
+    if((getChunk.filePtr = fopen(outputfile, "w")) == NULL) {
+        fprintf(stderr, "Open file %s failed\n", outputfile);
         exit(-1);
     }
     //TODO:only get chunks that I don't have
@@ -280,23 +280,24 @@ void peer_run(bt_config_t *config)
 
 void flushQueue(int sock, queue *sendQueue)
 {
-    int peerID;
-    int index = 0;
+    int i = 0;
     int retVal;
-    Packet *pkt = dequeue(sendQueue);
-    peerList_t *list = &(peerInfo.peerList);
+    node *nd=dequeue(sendQueue);
+    Packet *pkt = nd->data;
+    peerList_t *list = peerInfo.peerList;
     while(pkt != NULL) {
-        for(index = 0; index < peerInfo.numPeer; index++) {
-            if(list[index].isMe == 0) {
+        for(i = 0; i < peerInfo.numPeer; i++) {
+            if(list[i].isMe == 0) {
                 retVal = spiffy_sendto(sock,
                                        pkt->payload,
                                        getPacketSize(pkt),
                                        0,
-                                       (struct sockaddr *) & (list[index].addr),
-                                       sizeof(list[index].addr));
+                                       (struct sockaddr *) & (list[i].addr),
+                                       sizeof(list[i].addr));
                 if(retVal == -1) {
                     break;
                 }
+                free(nd);
                 freePacket(pkt);
             }
         }
@@ -306,9 +307,9 @@ void flushQueue(int sock, queue *sendQueue)
     }
 
     if(retVal == -1) {
-        if(errno == EINTR || errno == EAGAIN || errono == EWOULDBLOCK) {
+        if(errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {
             printf("Error EAGAIN\n");
-            enqueue(sendQueue, pkt);
+            enqueue(sendQueue, (void *)pkt);
         } else {
             printf("Fail sending\n");
             close(sock);

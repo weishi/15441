@@ -49,32 +49,37 @@ void setPacketType(Packet *pkt, char *type)
 }
 uint16_t getPacketSize(Packet *pkt)
 {
+    uint8_t *ptr = (pkt->payload);
     return *((uint16_t *)(ptr + 6));
 }
 
 uint16_t getPacketMagic(Packet *pkt)
 {
+    uint8_t *ptr = (pkt->payload);
     return *((uint16_t *)ptr);
 }
 
 uint8_t getPacketVersion(Packet *pkt)
 {
+    uint8_t *ptr = (pkt->payload);
     return *((uint8_t *)(ptr + 3));
 }
 
-uint8_t getPacketType(Packet *pkt);
-return *((uint8_t *)(ptr + 4));
+uint8_t getPacketType(Packet *pkt)
+{
+    uint8_t *ptr = (pkt->payload);
+    return *((uint8_t *)(ptr + 4));
 }
 
 void setPacketSize(Packet *pkt, uint16_t size)
 {
-    uint8_t *ptr = &(pkt->payload);
+    uint8_t *ptr = (pkt->payload);
     *((uint16_t *)(ptr + 6)) = size; //Packet size
 }
 
 void incPacketSize(Packet *pkt, uint16_t size)
 {
-    uint8_t *ptr = &(pkt->payload);
+    uint8_t *ptr = (pkt->payload);
     *((uint16_t *)(ptr + 6)) += size; //Packet size
 }
 
@@ -89,7 +94,6 @@ void newPacketWHOHAS(queue *sendQueue)
 
     for(i = 0; i < numPacket; i++) {
         int num;
-        uint8_t *ptr;
         Packet *thisObj = newPacketDefault();
         incPacketSize(thisObj, 4);
         setPacketType(thisObj, "WHOHAS");
@@ -99,12 +103,12 @@ void newPacketWHOHAS(queue *sendQueue)
             num = getChunk.numChunk % MAX_HASH_PER_PACKET;
         }
         for(j = 0; j < num; j++) {
-            while(getChunk.list[pktIndex].fetched) {
+            while(getChunk.list[pktIndex].fetchState) {
                 pktIndex++;
             }
             insertPacketHash(thisObj, getChunk.list[pktIndex].hash);
         }
-        enqueue(sendQueue, thisObj);
+        enqueue(sendQueue, (void *)thisObj);
     }
 }
 
@@ -119,8 +123,8 @@ void newPacketGET(Packet *pkt, queue *getQueue)
         //Only GET when chunk hasn't been fetched
         if(getChunk.list[idx].fetchState == 0) {
             getChunk.list[idx].fetchState = 2;
-            Packet *thisObj = newSinglePacketGET(hash);
-            enqueue(getQueue, thisObj);
+            Packet *thisObj = newPacketSingleGET(hash);
+            enqueue(getQueue, (void*)thisObj);
         }
     }
 }
@@ -130,6 +134,7 @@ Packet *newPacketSingleGET(uint8_t *hash)
     Packet *thisObj = newPacketDefault();
     incPacketSize(thisObj, 20);
     memcpy(&(thisObj->payload) + 16, hash, SHA1_HASH_SIZE);
+    return thisObj;
 }
 
 
@@ -139,7 +144,7 @@ Packet *newPacketIHAVE(Packet *pktWHOHAS)
     int i = 0;
     int idx;
     uint8_t *hash;
-    Packet *thisObj = newpPacketDefault();
+    Packet *thisObj = newPacketDefault();
     incPacketSize(thisObj, 4);
     setPacketType(thisObj, "IHAVE");
     for(i = 0; i < numHash; i++) {
@@ -158,20 +163,21 @@ Packet *newPacketIHAVE(Packet *pktWHOHAS)
 
 uint8_t getPacketNumHash(Packet *pkt)
 {
+    uint8_t *ptr = (pkt->payload);
     return *((uint8_t *)(ptr + 16));
 }
 
-uint8_t *getPacketHash(Packet *pkt, int index)
+uint8_t *getPacketHash(Packet *pkt, int i)
 {
     int type = getPacketType(pkt);
     if(type == 0 || type == 1 || type == 2) {
-        uint8_t *pPtr = &(pkt->payload);
-        return pPtr + 20 + SHA1_HASH_SIZE * index;
+        uint8_t *pPtr = (pkt->payload);
+        return pPtr + 20 + SHA1_HASH_SIZE * i;
     } else {
         return NULL;
     }
 }
-void insertPacketHASH(Packet *pkt, uint8_t *hash)
+void insertPacketHash(Packet *pkt, uint8_t *hash)
 {
     uint8_t *ptr = (uint8_t *)pkt;
     uint8_t numHash = *(ptr + 16);
@@ -181,58 +187,13 @@ void insertPacketHASH(Packet *pkt, uint8_t *hash)
 }
 
 
-Packet *headerPacketfromPacket(Packet *pkt)
-{
-    Packet *newObj = malloc(sizeof(Packet));
-    if(pkt->src == NULL) {
-        newObj->src = NULL;
-    } else {
-        newObj->src = malloc(strlen(pkt->src) + 1);
-        strcpy(newObj->src, pkt->src);
-    }
-    newObj->dest = NULL;
-    newObj->srcPort = pkt->srcPort;
-    newObj->destPort = 0;
-    //Payload
-    newObj->version = pkt->version;
-    newObj->TTL = pkt->TTL;
-    newObj->type = pkt->type;
-    newObj->senderID = pkt->senderID;
-    newObj->seqNo = pkt->seqNo;
-    newObj->numLink = 0;
-    newObj->numObj = 0;
-    newObj->listLink = NULL;
-    newObj->listObj = NULL;
-    //Meta
-    gettimeofday(&(newObj->timestamp), NULL);
-    newObj->hasRetran = 0;
-    newObj->isDown = 0;
-    newObj->isExpired = 0;
-    return newObj;
-}
 
-Packet *PacketfromPacket(Packet *pkt)
+Packet *newPacketFromBuffer(char *buf)
 {
-    int size = sizeof(uint32_t) * pkt->numLink;
-    Packet *newObj = headerPacketfromPacket(pkt);
-    newObj->numLink = pkt->numLink;
-    newObj->numObj = pkt->numObj;
-    newObj->listLink = malloc(size);
-    memcpy(newObj->listLink, pkt->listLink, size);
-    newObj->listObj = copyList(pkt->listObj);
-
-    return newObj;
-}
-
-Packet *newPacketFromBuffer(char *buf) 
-{
-    unsigned int i;
-    char *ptr;
-    uint8_t version, TTL;
 
     Packet *newObj = malloc(sizeof(Packet));
-    
-    printPacket(newObj);
+    memcpy(newObj->payload, buf, 1500);
+    //printPacket(newObj);
     return newObj;
 }
 /*
@@ -247,68 +208,6 @@ void printPacket(Packet *pkt)
 
 }
 */
-void PackettoBuffer(Packet *pkt, char *buffer, ssize_t *bufSize)
-{
-    unsigned int i;
-    uint16_t val16;
-    uint32_t val32;
-    ssize_t packetSize;
-    char *ptr;
-    memcpy(buffer, &(pkt->version), 1);
-    memcpy(buffer + 1, &(pkt->TTL), 1);
-    val16 = htons(pkt->type);
-    memcpy(buffer + 2, &val16, 2);
-    val32 = htonl(pkt->senderID);
-    memcpy(buffer + 4, &val32, 4);
-    val32 = htonl(pkt->seqNo);
-    memcpy(buffer + 8, &val32, 4);
-    val32 = htonl(pkt->numLink);
-    memcpy(buffer + 12, &val32, 4);
-    val32 = htonl(pkt->numObj);
-    memcpy(buffer + 16, &val32, 4);
-    ptr = buffer + 20;
-    for(i = 0; i < pkt->numLink; i++) {
-        val32 = htonl(pkt->listLink[i]);
-        memcpy(ptr + i * 4, &val32, 4);
-    }
-    ptr += i * 4;
-
-    for(i = 0; i < pkt->numObj; i++) {
-        char *objPtr = getNodeDataAt(pkt->listObj, i);
-        strcpy(ptr, objPtr);
-        ptr += strlen(objPtr) + 1;;
-    }
-    printPacket(pkt);
-    packetSize = ptr - buffer;
-    if(packetSize > *bufSize) {
-        printf("Packet too big, %zu / %zu\n", packetSize, *bufSize);
-        *bufSize = -1;
-    } else {
-        printf("Size: %zu bytes\n", packetSize);
-        *bufSize = packetSize;
-    }
-}
-
-void insertPacketLink(Packet *pkt, uint32_t nodeID)
-{
-    uint32_t numLink = pkt->numLink;
-    pkt->listLink = realloc(pkt->listLink, sizeof(uint32_t) * (numLink + 1));
-    pkt->listLink[numLink] = nodeID;
-    pkt->numLink++;
-}
-
-void insertPacketObj(Packet *pkt, char *objName)
-{
-    if(pkt->numObj == 0) {
-        pkt->listObj = malloc(sizeof(DLL));
-        initList(pkt->listObj, compareString, freeString, NULL, copyString);
-    }
-
-    insertNode(pkt->listObj, pkt->listObj->copyData(objName));
-    pkt->numObj++;
-
-}
-
 
 
 
@@ -317,7 +216,7 @@ int searchHash(uint8_t *hash, chunkList *chunkPool)
     int i;
     for(i = 0; i < chunkPool->numChunk; i++) {
         chunkLine *line = &(chunkPool->list[i]);
-        int matched = line->fetched == 0 &&
+        int matched = line->fetchState == 0 &&
                       sameHash(line->hash, hash, SHA1_HASH_SIZE);
         if(matched) {
             return i;

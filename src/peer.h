@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include "debug.h"
 #include "spiffy.h"
@@ -24,16 +25,16 @@
 #include "chunkList.h"
 #include "packet.h"
 
-typedef struct peerList_t{
+typedef struct peerList_t {
     int peerID;
     int isMe;
     struct sockaddr_in addr;
-}peerList_t;
+} peerList_t;
 
-typedef struct peerInfo_t{
+typedef struct peerInfo_t {
     int numPeer;
     peerList_t peerList[MAX_NUM_PEER];
-}peerInfo_t;
+} peerInfo_t;
 
 peerInfo_t peerInfo;
 
@@ -55,4 +56,9 @@ void fillPeerList(bt_config_t *);
 
 void handlePacket(Packet *);
 int searchPeer(struct sockaddr_in *);
+
+void flushQueue(int , queue *);
+
+
+
 #endif

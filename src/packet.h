@@ -31,7 +31,7 @@ void newPacketGET(Packet *,queue *);
 Packet * newPacketSingleGET(uint8_t*);
 Packet *newPacketIHAVE(Packet *);
 
-void freePacket(void *data);
+void freePacket(Packet *data);
 
 int verifyPacket(Packet *);
 void PackettoBuffer(Packet *, char *, ssize_t*);

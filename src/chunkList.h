@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #define SHA1_HASH_SIZE 20
+#define MAX_NUM_CHUNK 1024
 
 enum chunkType{
     MASTER,
