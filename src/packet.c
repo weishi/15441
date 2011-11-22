@@ -13,6 +13,7 @@ int verifyPacket(Packet *pkt)
     if(magic == 15441 && version == 1) {
         return 1;
     } else {
+        printf("Invalid magic=%d, version=%d\n", magic, version);
         return 0;
     }
 }
@@ -47,11 +48,6 @@ void setPacketType(Packet *pkt, char *type)
     }
     *(ptr + 3) = numType;
 }
-uint16_t getPacketSize(Packet *pkt)
-{
-    uint8_t *ptr = (pkt->payload);
-    return *((uint16_t *)(ptr + 6));
-}
 
 uint16_t getPacketMagic(Packet *pkt)
 {
@@ -62,25 +58,60 @@ uint16_t getPacketMagic(Packet *pkt)
 uint8_t getPacketVersion(Packet *pkt)
 {
     uint8_t *ptr = (pkt->payload);
-    return *((uint8_t *)(ptr + 3));
+    return *((uint8_t *)(ptr + 2));
 }
 
 uint8_t getPacketType(Packet *pkt)
 {
     uint8_t *ptr = (pkt->payload);
-    return *((uint8_t *)(ptr + 4));
+    return *((uint8_t *)(ptr + 3));
+}
+
+uint16_t getPacketSize(Packet *pkt)
+{
+    uint8_t *ptr = (pkt->payload);
+    return *((uint16_t *)(ptr + 6));
+}
+
+uint32_t getPacketSeq(Packet *pkt)
+{
+    uint8_t *ptr = (pkt->payload);
+    return *((uint32_t *)(ptr + 8));
+}
+
+uint32_t getPacketAck(Packet *pkt)
+{
+    uint8_t *ptr = (pkt->payload);
+    return *((uint32_t *)(ptr + 12));
+}
+
+void setPacketSeq(Packet *pkt, uint32_t seqNo)
+{
+    uint8_t *ptr = (pkt->payload);
+    *((uint32_t *)(ptr + 8)) = seqNo;
+}
+
+void setPacketAck(Packet *pkt, uint32_t ackNo)
+{
+    uint8_t *ptr = (pkt->payload);
+    *((uint32_t *)(ptr + 12)) = ackNo;
 }
 
 void setPacketSize(Packet *pkt, uint16_t size)
 {
     uint8_t *ptr = (pkt->payload);
-    *((uint16_t *)(ptr + 6)) = size; //Packet size
+    *((uint16_t *)(ptr + 6)) = size;
 }
 
 void incPacketSize(Packet *pkt, uint16_t size)
 {
     uint8_t *ptr = (pkt->payload);
-    *((uint16_t *)(ptr + 6)) += size; //Packet size
+    *((uint16_t *)(ptr + 6)) += size;
+}
+
+void setPacketTime(Packet *pkt)
+{
+    gettimeofday(&(pkt->timestamp), NULL);
 }
 
 void newPacketWHOHAS(queue *sendQueue)
@@ -107,6 +138,7 @@ void newPacketWHOHAS(queue *sendQueue)
                 pktIndex++;
             }
             insertPacketHash(thisObj, getChunk.list[pktIndex].hash);
+            pktIndex++;
         }
         enqueue(sendQueue, (void *)thisObj);
     }
@@ -119,21 +151,79 @@ void newPacketGET(Packet *pkt, queue *getQueue)
     uint8_t *hash;
     for(i = 0; i < numHash; i++) {
         hash = getPacketHash(pkt, i);
-        idx = searchHash(hash, &getChunk);
+        printHash(hash);
+        idx = searchHash(hash, &getChunk, 0);
         //Only GET when chunk hasn't been fetched
         if(getChunk.list[idx].fetchState == 0) {
             getChunk.list[idx].fetchState = 2;
             Packet *thisObj = newPacketSingleGET(hash);
-            enqueue(getQueue, (void*)thisObj);
+            enqueue(getQueue, (void *)thisObj);
         }
     }
+}
+
+void newPacketACK(Packet *pkt, queue *ackSendQueue)
+{
+    Packet *thisObj = newPacketDefault();
+    setPacketType(thisObj, "ACK");
+    setPacketAck(thisObj, getPacketSeq(pkt));
+    enqueue(ackSendQueue, (void *)thisObj);
+}
+
+void newPacketDATA(Packet *pkt, queue *dataQueue)
+{
+    uint8_t *hash = pkt->payload + 16;
+    int idx = searchHash(hash, &masterChunk, -1);
+    Packet *newPkt;
+    if(idx >= 0) {
+        int i = 0;
+        int numPacket = BT_CHUNK_SIZE / PACKET_DATA_SIZE;
+        if(BT_CHUNK_SIZE % PACKET_DATA_SIZE > 0) {
+            numPacket++;
+        }
+        for(i = 0; i < numPacket; i++) {
+            if(i == numPacket - 1) {
+                newPkt = newPacketSingleDATA(i + 1, idx, BT_CHUNK_SIZE % PACKET_DATA_SIZE);
+            } else {
+                newPkt = newPacketSingleDATA(i + 1, idx, PACKET_DATA_SIZE);
+            }
+            enqueue(dataQueue, newPkt);
+        }
+    }
+}
+
+Packet *newPacketSingleDATA(int seqNo, int seqChunk, size_t size)
+{
+    size_t retSize;
+    long offset = seqChunk * BT_CHUNK_SIZE + (seqNo - 1) * PACKET_DATA_SIZE;
+    Packet *pkt = newPacketDefault();
+
+    setPacketType(pkt, "DATA");
+    incPacketSize(pkt, size);
+    setPacketSeq(pkt, seqNo);
+
+    FILE *mf = masterChunk.filePtr;
+
+    rewind(mf);
+    fseek(mf, offset, SEEK_SET);
+    retSize = fread(pkt->payload + 16, sizeof(uint8_t), size, mf);
+    if(retSize != size) {
+        printf("IO Error reading chunk\n");
+        freePacket(pkt);
+        return NULL;
+    } else {
+        //printf("DataOut %d [%ld-%ld]\n", seqNo, offset, offset + size);
+        return pkt;
+    }
+
 }
 
 Packet *newPacketSingleGET(uint8_t *hash)
 {
     Packet *thisObj = newPacketDefault();
     incPacketSize(thisObj, 20);
-    memcpy(&(thisObj->payload) + 16, hash, SHA1_HASH_SIZE);
+    setPacketType(thisObj, "GET");
+    memcpy(thisObj->payload + 16, hash, SHA1_HASH_SIZE);
     return thisObj;
 }
 
@@ -149,11 +239,14 @@ Packet *newPacketIHAVE(Packet *pktWHOHAS)
     setPacketType(thisObj, "IHAVE");
     for(i = 0; i < numHash; i++) {
         hash = getPacketHash(pktWHOHAS, i);
-        idx = searchHash(hash, &hasChunk);
-        insertPacketHash(thisObj, hash);
+        idx = searchHash(hash, &hasChunk, -1);
+        if(idx >= 0) {
+            printf("Has[%d]", i);
+            insertPacketHash(thisObj, hash);
+        }
     }
 
-    if(i == 0) {
+    if(i == 0 || getPacketSize(thisObj) == 20) {
         freePacket(thisObj);
         return NULL;
     } else {
@@ -171,15 +264,14 @@ uint8_t *getPacketHash(Packet *pkt, int i)
 {
     int type = getPacketType(pkt);
     if(type == 0 || type == 1 || type == 2) {
-        uint8_t *pPtr = (pkt->payload);
-        return pPtr + 20 + SHA1_HASH_SIZE * i;
+        return pkt->payload + 20 + SHA1_HASH_SIZE * i;
     } else {
         return NULL;
     }
 }
 void insertPacketHash(Packet *pkt, uint8_t *hash)
 {
-    uint8_t *ptr = (uint8_t *)pkt;
+    uint8_t *ptr = pkt->payload;
     uint8_t numHash = *(ptr + 16);
     memcpy(ptr + 20 + numHash * SHA1_HASH_SIZE, hash, SHA1_HASH_SIZE);
     *(ptr + 16) = numHash + 1;//increment numHash
@@ -211,13 +303,15 @@ void printPacket(Packet *pkt)
 
 
 
-int searchHash(uint8_t *hash, chunkList *chunkPool)
+int searchHash(uint8_t *hash, chunkList *chunkPool, int fetchState)
 {
     int i;
     for(i = 0; i < chunkPool->numChunk; i++) {
         chunkLine *line = &(chunkPool->list[i]);
-        int matched = line->fetchState == 0 &&
-                      sameHash(line->hash, hash, SHA1_HASH_SIZE);
+        int matched = sameHash(line->hash, hash, SHA1_HASH_SIZE);
+        if(fetchState >= 0) {
+            matched = matched && line->fetchState == fetchState;
+        }
         if(matched) {
             return i;
         }
@@ -236,4 +330,10 @@ int sameHash(uint8_t *hash1, uint8_t *hash2, int size)
     return 1;
 }
 
-
+void printHash(uint8_t *hash)
+{
+    char buf[50];
+    bzero(buf, 50);
+    binary2hex(hash, 20, buf);
+    printf("%s\n", buf);
+}

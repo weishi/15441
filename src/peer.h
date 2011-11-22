@@ -4,6 +4,7 @@
 #define MAX_NUM_CHUNK 1024
 #define MAX_NUM_PEER 1024
 #define MAX_LINE_SIZE 1024
+#define GET_TIMEOUT_SEC 10
 
 #include <sys/types.h>
 #include <arpa/inet.h>
@@ -42,6 +43,7 @@ extern chunkList masterChunk;
 extern chunkList hasChunk;
 extern chunkList getChunk;
 
+int idle = 1;
 
 /* Connection */
 queue *nonCongestQueue;//For WHOHAS,IHAVE
@@ -51,6 +53,8 @@ connUp uploadPool[MAX_NUM_PEER];
 connDown downloadPool[MAX_NUM_PEER];
 
 void init(bt_config_t *);
+void printInit();
+void printChunk(chunkList *);
 void fillChunkList(chunkList *, enum chunkType, char *);
 void fillPeerList(bt_config_t *);
 
@@ -59,6 +63,12 @@ int searchPeer(struct sockaddr_in *);
 
 void flushQueue(int , queue *);
 
+void flushUpload(int sock );//DATA, ACK
+void flushDownload(int sock );//GET
 
+long diffTimeval(struct timeval *t1, struct timeval *t2);
+int updateGetSingleChunk(Packet *, int );
+void updateGetChunk();
+void updateUploadPool(Packet *, int);
 
 #endif

@@ -9,25 +9,28 @@ queue *newqueue()
     return newObj;
 }
 
-void enqueue(queue *qPtr, node *data)
+void enqueue(queue *qPtr, void *data)
 {
+    node *newNode = malloc(sizeof(node));
+    newNode->data = data;
     if(qPtr->head == NULL) {
-        qPtr->head = data;
-        qPtr->tail = data;
+        qPtr->head = newNode;
+        qPtr->tail = newNode;
     } else {
-        qPtr->tail->next = data;
-        qPtr->tail = data;
+        qPtr->tail->next = newNode;
+        qPtr->tail = newNode;
     }
-    data->next = NULL;
+    newNode->next = NULL;
     qPtr->size++;
 }
 
-node *dequeue(queue *qPtr)
+void *dequeue(queue *qPtr)
 {
     if(qPtr->head == NULL) {
         return NULL;
     }
     node *retNode = qPtr->head;
+    void *data = retNode->data;
     if(qPtr->head == qPtr->tail) {
         qPtr->head = NULL;
         qPtr->tail = NULL;
@@ -35,7 +38,8 @@ node *dequeue(queue *qPtr)
         qPtr->head = qPtr->head->next;
     }
     qPtr->size--;
-    return retNode;
+    free(retNode);
+    return data;
 
 }
 

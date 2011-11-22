@@ -22,7 +22,8 @@ typedef struct chunkLine{
 typedef struct chunkList{
 	enum chunkType type;
 	int numChunk;
-	chunkLine list[MAX_NUM_CHUNK];
+	char *getChunkFile;
+    chunkLine list[MAX_NUM_CHUNK];
     FILE *filePtr;//Master input or GET output
 }chunkList;
 

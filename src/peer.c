@@ -31,14 +31,44 @@ int main(int argc, char **argv)
 
 void init(bt_config_t *config)
 {
-
-    fillChunkList(&masterChunk, 1, NULL);
-    fillChunkList(&hasChunk, 2, NULL);
+    int i;
+    fillChunkList(&masterChunk, MASTER, config->chunk_file);
+    fillChunkList(&hasChunk, HAS, config->has_chunk_file);
 
     fillPeerList(config);
 
     maxConn = config->max_conn;
+    nonCongestQueue = newqueue();
+    for(i = 0; i < peerInfo.numPeer; i++) {
+        int peerID = peerInfo.peerList[i].peerID;
+        uploadPool[peerID].dataQueue = newqueue();
+        uploadPool[peerID].ackWaitQueue = newqueue();
+        downloadPool[peerID].getQueue = newqueue();
+        downloadPool[peerID].timeoutQueue = newqueue();
+        downloadPool[peerID].ackSendQueue = newqueue();
 
+        initSendWindow(&(uploadPool[peerID].sw));
+        initRecvWindow(&(downloadPool[peerID].rw));
+    }
+    printInit();
+}
+
+void printInit()
+{
+    printChunk(&masterChunk);
+    printChunk(&hasChunk);
+}
+void printChunk(chunkList *list)
+{
+    int i;
+    printf("ListType: %d\n", list->type);
+    for(i = 0; i < list->numChunk; i++) {
+        char buf[50];
+        bzero(buf, 50);
+        chunkLine *line = &(list->list[i]);
+        binary2hex(line->hash, 20, buf);
+        printf("%d: %s\n", line->seq, buf);
+    }
 }
 
 void fillChunkList(chunkList *list, enum chunkType type, char *filename)
@@ -63,9 +93,13 @@ void fillChunkList(chunkList *list, enum chunkType type, char *filename)
             exit(1);
         } else {
             FILE *masterFile;
+            char *newline = strrchr(lineBuf, '\n');
+            if(newline) {
+                *newline = '\0';
+            }
             linePtr = &(lineBuf[6]);
             if((masterFile = fopen(linePtr, "r")) == NULL) {
-                printf("Error open master data file\n");
+                printf("Error open master data file: <%s>\n", linePtr);
                 exit(1);
             }
             list->filePtr = masterFile;
@@ -73,11 +107,15 @@ void fillChunkList(chunkList *list, enum chunkType type, char *filename)
         //Skip "Chunks:" line
         fgets(lineBuf, MAX_LINE_SIZE, fPtr);
     case GET:
+        list->getChunkFile=calloc(strlen(filename)+1,1);
+        strcpy(list->getChunkFile, filename);
     case HAS:
         if(fPtr == NULL) {
             if((fPtr = fopen(filename, "r")) == NULL) {
                 fprintf(stderr, "Open file %s failed\n", filename);
                 exit(-1);
+            } else {
+                printf("Opened %s\n", filename);
             }
         }
         while(!feof(fPtr)) {
@@ -91,10 +129,11 @@ void fillChunkList(chunkList *list, enum chunkType type, char *filename)
             }
             chunkLine *cPtr = &(list->list[numChunk]);
             cPtr->seq = chunkIdx;
-            hex2binary(hashBuf, SHA1_HASH_SIZE, cPtr->hash);
+            hex2binary(hashBuf, 2 * SHA1_HASH_SIZE, cPtr->hash);
             free(hashBuf);
             numChunk++;
         }
+        list->numChunk = numChunk;
         break;
     default:
         printf("WTF\n");
@@ -130,29 +169,113 @@ void handlePacket(Packet *pkt)
         int type = getPacketType(pkt);
         switch(type) {
         case 0: { //WHOHAS
+            printf("->WHOHAS\n");
             Packet *pktIHAVE = newPacketIHAVE(pkt);
             enqueue(nonCongestQueue, (void *)pktIHAVE);
             break;
         }
         case 1: { //IHAVE
+            printf("->IHAVE\n");
             int peerIndex = searchPeer(&(pkt->src));
             int peerID = peerInfo.peerList[peerIndex].peerID;
-            newPacketGET(pkt, &(downloadPool[peerID].getQueue));
+            newPacketGET(pkt, downloadPool[peerID].getQueue);
             break;
         }
-        case 2://GET
+        case 2: { //GET
+            printf("->GET\n");
+            int peerIndex = searchPeer(&(pkt->src));
+            int peerID = peerInfo.peerList[peerIndex].peerID;
+            newPacketDATA(pkt, uploadPool[peerID].dataQueue);
+
             break;
-        case 3://DATA
+        }
+        case 3: { //DATA
+            printf("->DATA");
+            int peerIndex = searchPeer(&(pkt->src));
+            int peerID = peerInfo.peerList[peerIndex].peerID;
+            newPacketACK(pkt, downloadPool[peerID].ackSendQueue);
+            if(1 == updateGetSingleChunk(pkt, peerID)) {
+                updateGetChunk();
+            }
             break;
-        case 4://ACK
+        }
+        case 4: { //ACK
+            printf("->ACK\n");
+            int peerIndex = searchPeer(&(pkt->src));
+            int peerID = peerInfo.peerList[peerIndex].peerID;
+            updateUploadPool(pkt, peerID);
             break;
+        }
         case 5://DENIED not used
         default:
             printf("Type=WTF\n");
         }
     } else {
         printf("Invalid packet\n");
-        return;
+    }
+    freePacket(pkt);
+    return;
+}
+
+void updateUploadPool(Packet *pkt, int peerID)
+{
+    uint32_t ack = getPacketAck(pkt);
+    queue *ackWaitQueue = uploadPool[peerID].ackWaitQueue;
+    Packet *ackWait = dequeue(ackWaitQueue);
+    if(ackWait != NULL && ack == getPacketSeq(ackWait)) {
+        freePacket(ackWait);
+    } else {
+        printf("Got ACK for something didn't send?\n");
+    }
+}
+
+int updateGetSingleChunk(Packet *pkt, int peerID)
+{
+    int dataSize = getPacketSize(pkt) - 16;
+    uint8_t *dataPtr = pkt->payload + 16;
+    int seq = getPacketSeq(pkt);
+    int curChunk = downloadPool[peerID].curChunkID;
+    long offset = (seq - 1) * PACKET_DATA_SIZE + BT_CHUNK_SIZE * curChunk;
+    FILE *of = getChunk.filePtr;
+    printf("DataIn %d [%ld-%ld]\n", seq, offset, offset + dataSize);
+    fseek(of, offset, SEEK_SET);
+    fwrite(dataPtr, sizeof(uint8_t), dataSize, of);
+
+    /*Check if this GET finished */
+    //This is a hack, should be change in CP2
+    if(seq == BT_CHUNK_SIZE / PACKET_DATA_SIZE + 1) {
+        getChunk.list[curChunk].fetchState = 1;
+        downloadPool[peerID].state = 0;
+        Packet *clearPkt = dequeue(downloadPool[peerID].timeoutQueue);
+        while(clearPkt != NULL) {
+            freePacket(clearPkt);
+            clearPkt = dequeue(downloadPool[peerID].timeoutQueue);
+        }
+        printf("Chunk %d fetched\n", curChunk);
+        printf("%d More GETs in queue\n", downloadPool[peerID].getQueue->size);
+        return 1;//this GET is done
+    } else {
+        return 0;
+    }
+
+}
+/* Check if all GETs are done */
+void updateGetChunk()
+{
+    int i = 0;
+    int done = 1;
+    for(i = 0; i < getChunk.numChunk; i++) {
+        if(getChunk.list[i].fetchState != 1) {
+            done = 0;
+            printf("Still missing chunk %d\n", i);
+        }
+    }
+    if(done) {
+        fclose(getChunk.filePtr);
+        printf("GOT %s\n", getChunk.getChunkFile);
+        free(getChunk.getChunkFile);
+        bzero(&getChunk, sizeof(getChunk));
+        idle = 1;
     }
 }
 
@@ -181,12 +304,11 @@ void process_inbound_udp(int sock)
     fromlen = sizeof(from);
     spiffy_recvfrom(sock, buf, BUFLEN, 0, (struct sockaddr *) &from, &fromlen);
 
-    printf("PROCESS_INBOUND_UDP SKELETON -- replace!\n"
-           "Incoming message from %s:%d\n%s\n\n",
+    /*
+    printf("Incoming message from %s:%d\n",
            inet_ntoa(from.sin_addr),
-           ntohs(from.sin_port),
-           buf);
-
+           ntohs(from.sin_port));
+    */
     Packet *newPkt = newPacketFromBuffer(buf);
     memcpy(&(newPkt->src), &from, fromlen);
     handlePacket(newPkt);
@@ -204,6 +326,7 @@ void process_get(char *chunkfile, char *outputfile)
         exit(-1);
     }
     //TODO:only get chunks that I don't have
+    printChunk(&getChunk);
     newPacketWHOHAS(nonCongestQueue);
 
 }
@@ -218,6 +341,7 @@ void handle_user_input(char *line, void *cbdata)
     if (sscanf(line, "GET %120s %120s", chunkf, outf)) {
         if (strlen(outf) > 0) {
             process_get(chunkf, outf);
+            idle = 0;
         }
     }
 }
@@ -266,7 +390,7 @@ void peer_run(bt_config_t *config)
                 process_inbound_udp(sock);
             }
 
-            if (FD_ISSET(STDIN_FILENO, &readfds)) {
+            if (FD_ISSET(STDIN_FILENO, &readfds) && idle == 1) {
                 process_user_input(STDIN_FILENO,
                                    userbuf,
                                    handle_user_input,
@@ -275,17 +399,131 @@ void peer_run(bt_config_t *config)
         }
 
         flushQueue(sock, nonCongestQueue);
+        flushUpload(sock);
+        flushDownload(sock);
+    }
+}
+
+void flushUpload(int sock)
+{
+    int i = 0;
+    Packet *pkt;
+    connUp *pool = uploadPool;
+    for(i = 0; i < peerInfo.numPeer; i++) {
+        int peerID = peerInfo.peerList[i].peerID;
+        Packet *ack = dequeue(pool[peerID].ackWaitQueue);
+        if(ack == NULL) { //Send DATA at a time
+            pkt = dequeue(pool[peerID].dataQueue);
+            if(pkt != NULL) {
+                peerList_t *p = &(peerInfo.peerList[i]);
+                int retVal = spiffy_sendto(sock,
+                                           pkt->payload,
+                                           getPacketSize(pkt),
+                                           0,
+                                           (struct sockaddr *) & (p->addr),
+                                           sizeof(p->addr));
+                if(retVal == -1) {
+                    printf("Data lost\n");
+                }
+                enqueue(pool[peerID].ackWaitQueue, pkt);
+            }
+        } else { //Wait if there is outstanding ACK
+            enqueue(pool[peerID].ackWaitQueue, ack);
+        }
+    }
+}
+
+void flushDownload(int sock)
+{
+    int i = 0;
+    Packet *pkt;
+    connDown *pool = downloadPool;
+    for(i = 0; i < peerInfo.numPeer; i++) {
+        int peerID = peerInfo.peerList[i].peerID;
+        /* Send ACK */
+        Packet *ack = dequeue(pool[peerID].ackSendQueue);
+        if(ack != NULL) {
+            peerList_t *p = &(peerInfo.peerList[i]);
+            int retVal = spiffy_sendto(sock,
+                                       ack->payload,
+                                       getPacketSize(ack),
+                                       0,
+                                       (struct sockaddr *) & (p->addr),
+                                       sizeof(p->addr));
+            if(retVal == -1) {
+                printf("Sending ACK failed\n");
+            }
+            freePacket(ack);
+        }
+        /* Send GET */
+        switch(pool[peerID].state) {
+        case 0://Ready for next
+            pkt = dequeue(pool[peerID].getQueue);
+            if(pkt != NULL) {
+                printf("Sending a GET\n");
+                peerList_t *p = &(peerInfo.peerList[i]);
+                uint8_t *hash = pkt->payload + 16;
+                char buf[50];
+                bzero(buf, 50);
+                binary2hex(hash, 20, buf);
+                printf("GET hash:%s\n", buf);
+                pool[peerID].curChunkID = searchHash(hash, &getChunk, -1);
+                //Send get
+                int retVal = spiffy_sendto(sock,
+                                           pkt->payload,
+                                           getPacketSize(pkt),
+                                           0,
+                                           (struct sockaddr *) & (p->addr),
+                                           sizeof(p->addr));
+
+                if(retVal == -1) {
+                    Packet *pktIHAVE = newPacketIHAVE(pkt);
+                    enqueue(nonCongestQueue, (void *)pktIHAVE);
+                    freePacket(pkt);
+                    return;
+                }
+                //Mark time
+                setPacketTime(pkt);
+                //Put it in timeoutQueue
+                enqueue(pool[peerID].timeoutQueue, pkt);
+                pool[peerID].state = 1;
+            }
+            break;
+        case 1: {//Waiting
+            pkt = dequeue(pool[peerID].timeoutQueue);
+            struct timeval curTime;
+            gettimeofday(&curTime, NULL);
+            long dt = diffTimeval(&curTime, &(pkt->timestamp));
+            if(dt > GET_TIMEOUT_SEC) {
+                Packet *pktIHAVE = newPacketIHAVE(pkt);
+                enqueue(nonCongestQueue, (void *)pktIHAVE);
+                freePacket(pkt);
+            } else {
+                enqueue(pool[peerID].timeoutQueue, pkt);
+            }
+            break;
+        }
+        case 2: {
+            break;
+        }
+        default:
+            break;
+        }
+
     }
 }
 
 void flushQueue(int sock, queue *sendQueue)
 {
     int i = 0;
-    int retVal;
-    node *nd=dequeue(sendQueue);
-    Packet *pkt = nd->data;
+    int retVal = -1;
+    Packet *pkt = dequeue(sendQueue);
+    if(pkt == NULL) {
+        return;
+    }
     peerList_t *list = peerInfo.peerList;
     while(pkt != NULL) {
+        printf("Sending Packet\n");
         for(i = 0; i < peerInfo.numPeer; i++) {
             if(list[i].isMe == 0) {
                 retVal = spiffy_sendto(sock,
@@ -297,13 +535,14 @@ void flushQueue(int sock, queue *sendQueue)
                 if(retVal == -1) {
                     break;
                 }
-                free(nd);
-                freePacket(pkt);
             }
         }
+
         if(retVal == -1) {
             break;
         }
+        freePacket(pkt);
+        pkt = dequeue(sendQueue);
     }
 
     if(retVal == -1) {
@@ -314,10 +553,15 @@ void flushQueue(int sock, queue *sendQueue)
             printf("Fail sending\n");
             close(sock);
         }
+    } else {
+        printf("All packets flushed\n");
     }
 
 }
 
 
 
-
+long diffTimeval(struct timeval *t1, struct timeval *t2)
+{
+    return t1->tv_sec - t2->tv_sec;
+}

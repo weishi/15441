@@ -4,19 +4,21 @@
 #include "queue.h"
 
 typedef struct sendWindow{
-	int LastPacketAcked;
-	int LastPacketSent;
-	int LastPacketAvailable;
-	queue sQueue;
+	int lastPacketAcked;
+	int lastPacketSent;
+	int lastPacketAvailable;
+    int windowSize;
 }sendWindow;
 
 
 typedef struct recvWindow{
-	int LastPacketRead;
-	int LastPacketRcvd;
-	int NextPacketExpected;
-	queue rQueue;
+	int lastPacketRead;
+	int lastPacketRcvd;
+	int nextPacketExpected;
+    int windowSize;
 }recvWindow;
 
+void initRecvWindow(recvWindow *);
+void initSendWindow(sendWindow *);
 
 #endif
