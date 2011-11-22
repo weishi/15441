@@ -1,0 +1,27 @@
+Test methods
+
++ Initial Debug test
+
+    Run two clients and check for any segfaults and error
+
++ Correctness test
+
+    Run some simple configuration of nodes, do single GET.
+    Compare results with diff
+    
++ Memory leak test
+           
+    Run client with valgrind. Initial multiple GET request
+    After a while kill the client to see if there are **definitely lost**
+    memory blocks.
+                  
++ Evil test
+
+    Not yet
+
++ Stress test
+                          
+   1) Run multiple GET requests
+   
+   2) Kill and restart 1 client but keep the other running
+

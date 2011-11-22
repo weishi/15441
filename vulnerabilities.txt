@@ -1,0 +1,3 @@
+1. Loads 1 chunk into memeory all at once. Will cause trouble if chunk size is huge.
+
+2. Detecting end of DATA transfer is not satisfactory.
