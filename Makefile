@@ -22,6 +22,7 @@ OBJS+=window.o
 OBJS+=connPool.o
 OBJS+=queue.o
 OBJS+=packet.o
+OBJS+=congestCtrl.o
 
 BINS = peer make-chunks
 
