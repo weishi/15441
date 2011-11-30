@@ -40,6 +40,35 @@ void *dequeue(queue *qPtr)
     qPtr->size--;
     free(retNode);
     return data;
+}
 
+void *peek(queue *qPtr)
+{
+  if(qPtr->head == NULL) {
+    return NULL;
+  }
+  else 
+    return qPtr->head->data;
+}
+
+void mergeAtFront(queue *ins, queue *base)
+{
+	if(ins->head == NULL)
+		return;
+	if(base->head == NULL)
+		base = ins;
+	else {
+		ins->tail->next = base->head;
+		base->head = ins->head;
+		free(ins);
+		ins = newqueue();
+	}
+}
+
+void clearQueue(queue *qPtr){
+	void* data = dequeue(qPtr);
+	while(data != NULL){
+		data = dequeue(qPtr);
+	}
 }
 

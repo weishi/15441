@@ -2,7 +2,9 @@
 
 void freePacket(Packet *pkt)
 {
-    free(pkt);
+  if(pkt->dest != NULL)
+    free(pkt->dest);
+  free(pkt);
 }
 
 int verifyPacket(Packet *pkt)
@@ -21,6 +23,7 @@ int verifyPacket(Packet *pkt)
 Packet *newPacketDefault()
 {
     Packet *pkt = calloc(sizeof(Packet), 1);
+    memset(pkt, 0, sizeof(Packet));
     uint8_t *ptr = pkt->payload;
     *((uint16_t *)ptr) = 15441; //magic number
     *(ptr + 2) = 1; //version
@@ -118,29 +121,36 @@ void newPacketWHOHAS(queue *sendQueue)
 {
     int i, j;
     int pktIndex = 0;
-    int numPacket = getChunk.numChunk / MAX_HASH_PER_PACKET;
+    int needToFetch = 0;
+    int numHash = getChunk.numChunk;
+    int numPacket = numHash / MAX_HASH_PER_PACKET;
     if(getChunk.numChunk % MAX_HASH_PER_PACKET > 0) {
         numPacket++;
     }
 
     for(i = 0; i < numPacket; i++) {
-        int num;
-        Packet *thisObj = newPacketDefault();
-        incPacketSize(thisObj, 4);
-        setPacketType(thisObj, "WHOHAS");
-        if(i < numPacket - 1) {
-            num = MAX_HASH_PER_PACKET;
-        } else {
-            num = getChunk.numChunk % MAX_HASH_PER_PACKET;
-        }
-        for(j = 0; j < num; j++) {
-            while(getChunk.list[pktIndex].fetchState) {
-                pktIndex++;
-            }
-            insertPacketHash(thisObj, getChunk.list[pktIndex].hash);
-            pktIndex++;
-        }
-        enqueue(sendQueue, (void *)thisObj);
+      int num;
+      Packet *thisObj = newPacketDefault();
+      incPacketSize(thisObj, 4);
+      setPacketType(thisObj, "WHOHAS");
+      if(i < numPacket - 1) {
+	num = MAX_HASH_PER_PACKET;
+      } else {
+	num = getChunk.numChunk % MAX_HASH_PER_PACKET;
+      }
+      for(j = 0; j < num; j++) {
+	while(getChunk.list[pktIndex].fetchState
+	      || (searchHash(getChunk.list[pktIndex].hash, &hasChunk, -1) >= 0)) {
+	  pktIndex++;
+	}
+	if(pktIndex == numHash)
+	  break;
+	insertPacketHash(thisObj, getChunk.list[pktIndex].hash);
+	needToFetch = 1;
+	pktIndex++;
+      }
+      if(needToFetch)
+	enqueue(sendQueue, (void *)thisObj);
     }
 }
 
@@ -162,11 +172,11 @@ void newPacketGET(Packet *pkt, queue *getQueue)
     }
 }
 
-void newPacketACK(Packet *pkt, queue *ackSendQueue)
+void newPacketACK(uint32_t ack, queue *ackSendQueue)
 {
     Packet *thisObj = newPacketDefault();
     setPacketType(thisObj, "ACK");
-    setPacketAck(thisObj, getPacketSeq(pkt));
+    setPacketAck(thisObj, ack);
     enqueue(ackSendQueue, (void *)thisObj);
 }
 
@@ -250,7 +260,8 @@ Packet *newPacketIHAVE(Packet *pktWHOHAS)
         freePacket(thisObj);
         return NULL;
     } else {
-        return thisObj;
+      setPacketDest(thisObj, &(pktWHOHAS->src), sizeof(pktWHOHAS->src));
+      return thisObj;
     }
 }
 
@@ -330,6 +341,10 @@ int sameHash(uint8_t *hash1, uint8_t *hash2, int size)
     return 1;
 }
 
+void setPacketDest(Packet* pkt, struct sockaddr_in *addr, int length){
+  pkt->dest = malloc(length);
+  memcpy(pkt->dest, addr, length);
+}
 void printHash(uint8_t *hash)
 {
     char buf[50];

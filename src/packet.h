@@ -22,9 +22,10 @@ extern chunkList getChunk;
 extern chunkList hasChunk;
 
 typedef struct Packet {
-    struct sockaddr_in src;
-    struct timeval timestamp;
-    uint8_t payload[1500];
+  struct sockaddr_in src;
+  struct sockaddr_in* dest; //used only for IHAVE packet
+  struct timeval timestamp;
+  uint8_t payload[1500];
 } Packet;
 
 /* Constructor */
@@ -33,7 +34,7 @@ Packet *newPacketDefault();
 void newPacketWHOHAS(queue *);
 void newPacketGET(Packet *,queue *);
 void newPacketDATA(Packet *,queue *);
-void newPacketACK(Packet *,queue *);
+void newPacketACK(uint32_t,queue *);
 Packet *newPacketSingleDATA(int , int , size_t);
 Packet * newPacketSingleGET(uint8_t*);
 Packet *newPacketIHAVE(Packet *);
@@ -60,7 +61,7 @@ void setPacketSeq(Packet *pkt, uint32_t);
 void setPacketAck(Packet *pkt, uint32_t);
 void setPacketTime(Packet *pkt);
 
-void setPacketDest(Packet *, char*, int);
+void setPacketDest(Packet *, struct sockaddr_in*, int);
 
 void insertPacketData(Packet *, char *);
 void insertPacketHash(Packet *, uint8_t *);

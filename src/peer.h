@@ -5,6 +5,7 @@
 #define MAX_NUM_PEER 1024
 #define MAX_LINE_SIZE 1024
 #define GET_TIMEOUT_SEC 10
+#define DATA_TIMEOUT_SEC 2
 
 #include <sys/types.h>
 #include <arpa/inet.h>
@@ -14,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <assert.h>
 
 #include "debug.h"
 #include "spiffy.h"
@@ -27,14 +29,14 @@
 #include "packet.h"
 
 typedef struct peerList_t {
-    int peerID;
-    int isMe;
-    struct sockaddr_in addr;
+  int peerID;
+  int isMe;
+  struct sockaddr_in addr;
 } peerList_t;
 
 typedef struct peerInfo_t {
-    int numPeer;
-    peerList_t peerList[MAX_NUM_PEER];
+  int numPeer;
+  peerList_t peerList[MAX_NUM_PEER];
 } peerInfo_t;
 
 peerInfo_t peerInfo;
@@ -42,9 +44,9 @@ peerInfo_t peerInfo;
 extern chunkList masterChunk;
 extern chunkList hasChunk;
 extern chunkList getChunk;
+extern FILE *log_file;
 
 int idle = 1;
-
 /* Connection */
 queue *nonCongestQueue;//For WHOHAS,IHAVE
 
@@ -67,8 +69,9 @@ void flushUpload(int sock );//DATA, ACK
 void flushDownload(int sock );//GET
 
 long diffTimeval(struct timeval *t1, struct timeval *t2);
+int diffTimevalMilli(struct timeval *t1, struct timeval *t2);
 int updateGetSingleChunk(Packet *, int );
 void updateGetChunk();
-void updateUploadPool(Packet *, int);
+void updateACKQueue(Packet *, int);
 
 #endif
