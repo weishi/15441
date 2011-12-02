@@ -4,7 +4,7 @@
 #define MAX_NUM_CHUNK 1024
 #define MAX_NUM_PEER 1024
 #define MAX_LINE_SIZE 1024
-#define GET_TIMEOUT_SEC 10
+#define GET_TIMEOUT_SEC 2
 #define DATA_TIMEOUT_SEC 2
 
 #include <sys/types.h>

@@ -53,7 +53,7 @@ void init(bt_config_t *config)
     downloadPool[peerID].timeoutQueue = newqueue();
     downloadPool[peerID].ackSendQueue = newqueue();
     downloadPool[peerID].connected = 0;
-	
+    downloadPool[peerID].cache = NULL;
     initWindows(&(downloadPool[peerID].rw), &(uploadPool[peerID].sw));
   }
   printInit();
@@ -184,6 +184,7 @@ void handlePacket(Packet *pkt)
       printf("->IHAVE\n");
       int peerIndex = searchPeer(&(pkt->src));
       int peerID = peerInfo.peerList[peerIndex].peerID;
+      printf("peer ID and index %d %d\n", peerID, peerIndex);
       newPacketGET(pkt, downloadPool[peerID].getQueue);
       idle = 0;
       break;
@@ -232,16 +233,21 @@ void updateACKQueue(Packet *pkt, int peerID)
   uint32_t ack = getPacketAck(pkt);
   queue *ackWaitQueue = uploadPool[peerID].ackWaitQueue;
   queue *dataQueue = uploadPool[peerID].dataQueue;
-  Packet *ackWait = dequeue(ackWaitQueue);
+  Packet *ackWait = peek(ackWaitQueue);
   struct timeval cur_time;
   uploadPool[peerID].timeoutCount = 0;
+  printf("Received ACK %d. Next in ackWaitQueue: %d\n", ack, getPacketSeq(ackWait));
   if(ackWait != NULL){
-    if(ack == getPacketSeq(ackWait)) {
-      freePacket(ackWait);
-      gettimeofday(&cur_time, NULL);
-      logger(peerID, uploadPool[peerID].connID, diffTimevalMilli(&cur_time, &(uploadPool[peerID].startTime)), sw->ctrl.windowSize);
+    if(ack >= getPacketSeq(ackWait)){
+      while(ackWait != NULL && ack >= getPacketSeq(ackWait)){
+	dequeue(ackWaitQueue);
+	freePacket(ackWait);
+	gettimeofday(&cur_time, NULL);
+	logger(peerID, uploadPool[peerID].connID, diffTimevalMilli(&cur_time, &(uploadPool[peerID].startTime)), sw->ctrl.windowSize);
+	expandWindow(&(sw->ctrl));
+	ackWait = peek(ackWaitQueue);
+      }
       sw->lastPacketAcked = ack;
-      expandWindow(&(sw->ctrl));
       updateSendWindow(sw);
       //This is a hack but could be fine 
       //Sender resets sending window if the whole chunk has been sent
@@ -277,11 +283,22 @@ int updateGetSingleChunk(Packet *pkt, int peerID)
   uint8_t *dataPtr = pkt->payload + 16;
   uint32_t seq = (uint32_t)getPacketSeq(pkt);
   downloadPool[peerID].timeoutCount = 0;
-  if(seq == rw->nextPacketExpected){
-    rw->lastPacketRead = seq;//TODO: check with ShiWei what is lastPackeRead
+  printf("Got pkt %d expecting %d\n", seq, rw->nextPacketExpected);
+  if(seq >= rw->nextPacketExpected){ //TODO: logic unfinished!
+    if(seq > rw->nextPacketExpected){
+      insertInOrder(&(downloadPool[peerID].cache), 
+		    newFreePacketACK(seq), seq);
+      //ASSERSION: under all cases the queue should be empty when this happens
+      newPacketACK(rw->nextPacketExpected - 1, downloadPool[peerID].ackSendQueue);
+      
+    } else {
+      newPacketACK(seq, downloadPool[peerID].ackSendQueue);
+      rw->nextPacketExpected = 
+	flushCache(rw->nextPacketExpected, downloadPool[peerID].ackSendQueue, downloadPool[peerID].cache);
+    }
+    rw->lastPacketRead = seq;
     rw->lastPacketRcvd = seq;
-    rw->nextPacketExpected++;
-    newPacketACK(seq, downloadPool[peerID].ackSendQueue);
+    
     int curChunk = downloadPool[peerID].curChunkID;
     long offset = (seq - 1) * PACKET_DATA_SIZE + BT_CHUNK_SIZE * curChunk;
     FILE *of = getChunk.filePtr;
@@ -307,13 +324,13 @@ int updateGetSingleChunk(Packet *pkt, int peerID)
       return 0;
     }
   }
-  else {//unexpected Packet
+  else {//packet seq smaller than expected. Just send back ack.
     //TODO: implement this
     printf("Received unexpected packet."
 	   "Expecting %d received %d !"
 	   "Implement its handling!\n",
 	   rw->nextPacketExpected, seq);
-    newPacketACK(rw->lastPacketRcvd, downloadPool[peerID].ackSendQueue);
+    newPacketACK(seq, downloadPool[peerID].ackSendQueue);
     return 0;
   }
 }
@@ -344,8 +361,11 @@ int searchPeer(struct sockaddr_in *src)
   for(i = 0; i < peerInfo.numPeer; i++) {
     struct sockaddr_in *entry = &(peerInfo.peerList[i].addr);
     //Compare sin_port & sin_addr.s_addr
-    int isSame = entry->sin_port == src->sin_port &&
-      entry->sin_addr.s_addr == src->sin_addr.s_addr;
+    //TODO:
+    //somehow packt redirectd from spiffy router does not have sin_addr so
+    //im ignoring this field when comparing peers for now. Fix this later
+    int isSame = entry->sin_port == src->sin_port;
+      //&& entry->sin_addr.s_addr == src->sin_addr.s_addr;
     if(isSame) {
       return i;
     }
@@ -484,18 +504,14 @@ void flushUpload(int sock)
 	//TODO:implement congestion control
 	pool[peerID].timeoutCount++;
 	if(pool[peerID].timeoutCount == 3){
+	  //cleanUpConnUp() has flaws
 	  cleanUpConnUp(pool[peerID]);
 	  continue;
 	}
-	printf("data timeout occured: %ld\n", dt);
+	printf("data timeout. waiting for ack %d\n", getPacketSeq(ack));
 	shrinkWindow(&(pool[peerID].sw.ctrl));
 	mergeAtFront(pool[peerID].ackWaitQueue, pool[peerID].dataQueue);
       }
-    }
-    if(pkt != NULL){
-      printf("Sending data packet at Q for peer %d seq %d lastpackavai %d"
-	     " last ack %d\n", peerID, getPacketSeq(pkt), 
-	     pool[peerID].sw.lastPacketAvailable, pool[peerID].sw.lastPacketAcked);
     }
     while(pkt != NULL && 
 	  (getPacketSeq(pkt) <= pool[peerID].sw.lastPacketAvailable)) { 
@@ -507,6 +523,7 @@ void flushUpload(int sock)
 				 (struct sockaddr *) & (p->addr),
 				 sizeof(p->addr));
       setPacketTime(pkt);
+      printf("Sent data %d. last available %d\n", getPacketSeq(pkt), pool[peerID].sw.lastPacketAvailable);
       if(retVal == -1) { //DATA lost
 	break;
       }
@@ -536,12 +553,14 @@ void flushDownload(int sock)
     */
     while(ack != NULL) {
       peerList_t *p = &(peerInfo.peerList[i]);
+      printf("Sending ack %d\n", getPacketAck(ack));
       int retVal = spiffy_sendto(sock,
 				 ack->payload,
 				 getPacketSize(ack),
 				 0,
 				 (struct sockaddr *) & (p->addr),
 				 sizeof(p->addr));
+      printf("Sent ack %d\n", getPacketAck(ack));
       if(retVal == -1) {
 	printf("Sending ACK failed\n");
       } else{
@@ -586,7 +605,6 @@ void flushDownload(int sock)
       }
       break;
     case 1: {//Waiting
-      printf("GET waiting \n");
       pkt = peek(pool[peerID].timeoutQueue);
       struct timeval curTime;
       gettimeofday(&curTime, NULL);
@@ -650,7 +668,6 @@ void flushQueue(int sock, queue *sendQueue)
 	}
       }
     }				
-    //why break here?
     if(retVal == -1) {
       noLoss = 0;
       if(errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) {

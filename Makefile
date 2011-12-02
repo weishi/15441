@@ -23,7 +23,7 @@ OBJS+=connPool.o
 OBJS+=queue.o
 OBJS+=packet.o
 OBJS+=congestCtrl.o
-
+OBJS+=sortedPacketCache.o
 BINS = peer make-chunks
 
 $(SOURCE)/%.o: %.c

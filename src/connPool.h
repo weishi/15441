@@ -2,6 +2,7 @@
 #define CONNPOOL_H 
 
 #include "window.h"
+#include "sortedPacketCache.h"
 
 typedef struct connUp{
   sendWindow sw;
@@ -24,6 +25,7 @@ typedef struct connDown{
   queue *getQueue;
   queue *timeoutQueue;
   queue *ackSendQueue;
+  sortedPacketCache* cache;
   uint8_t connected;
   uint8_t timeoutCount; // assert connection loss upon 3 consecutive timeouts
 }connDown;

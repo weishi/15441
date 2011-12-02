@@ -180,6 +180,13 @@ void newPacketACK(uint32_t ack, queue *ackSendQueue)
     enqueue(ackSendQueue, (void *)thisObj);
 }
 
+Packet *newFreePacketACK(uint32_t ack){
+  Packet *thisObj = newPacketDefault();
+  setPacketType(thisObj, "ACK");
+  setPacketAck(thisObj, ack);
+  return thisObj;
+}
+
 void newPacketDATA(Packet *pkt, queue *dataQueue)
 {
     uint8_t *hash = pkt->payload + 16;
@@ -295,6 +302,7 @@ Packet *newPacketFromBuffer(char *buf)
 {
 
     Packet *newObj = malloc(sizeof(Packet));
+    memset(newObj, 0, sizeof(Packet));
     memcpy(newObj->payload, buf, 1500);
     //printPacket(newObj);
     return newObj;

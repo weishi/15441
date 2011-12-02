@@ -35,7 +35,8 @@ void newPacketWHOHAS(queue *);
 void newPacketGET(Packet *,queue *);
 void newPacketDATA(Packet *,queue *);
 void newPacketACK(uint32_t,queue *);
-Packet *newPacketSingleDATA(int , int , size_t);
+Packet * newFreePacketACK(uint32_t);
+Packet * newPacketSingleDATA(int , int , size_t);
 Packet * newPacketSingleGET(uint8_t*);
 Packet *newPacketIHAVE(Packet *);
 
