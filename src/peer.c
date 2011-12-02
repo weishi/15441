@@ -184,7 +184,7 @@ void handlePacket(Packet *pkt)
       printf("->IHAVE\n");
       int peerIndex = searchPeer(&(pkt->src));
       int peerID = peerInfo.peerList[peerIndex].peerID;
-      printf("peer ID and index %d %d\n", peerID, peerIndex);
+      printf("Trying to get a chunk from %d\n", peerID);
       newPacketGET(pkt, downloadPool[peerID].getQueue);
       idle = 0;
       break;
@@ -259,6 +259,7 @@ void updateACKQueue(Packet *pkt, int peerID)
     } else {//unexpected ACK ack number 
       if(ack == sw->lastPacketAcked) { //duplicate ACK
 	sw->dupCount++;
+	printf("Received duplicate packets %d\n", ack);
 	if(sw->dupCount == MAX_DUPLICATE){ //trigger fast retransmit
 	  printf("Received 3 duplicates acks %d retransmitting\n", ack);
 	  mergeAtFront(ackWaitQueue, dataQueue);
@@ -293,8 +294,10 @@ int updateGetSingleChunk(Packet *pkt, int peerID)
       
     } else {
       newPacketACK(seq, downloadPool[peerID].ackSendQueue);
+      
+      printf("cache: %p\n", downloadPool[peerID].cache);
       rw->nextPacketExpected = 
-	flushCache(rw->nextPacketExpected, downloadPool[peerID].ackSendQueue, downloadPool[peerID].cache);
+	flushCache(rw->nextPacketExpected, downloadPool[peerID].ackSendQueue, &downloadPool[peerID].cache);
     }
     rw->lastPacketRead = seq;
     rw->lastPacketRcvd = seq;
@@ -493,7 +496,6 @@ void flushUpload(int sock)
   connUp *pool = uploadPool;
   for(i = 0; i < peerInfo.numPeer; i++) {
     int peerID = peerInfo.peerList[i].peerID;
-    pkt = peek(pool[peerID].dataQueue);
     //Pacekt lies within the sending window
     Packet *ack = peek(pool[peerID].ackWaitQueue);
     if(ack != NULL){
@@ -501,18 +503,18 @@ void flushUpload(int sock)
       gettimeofday(&curTime, NULL);
       long dt = diffTimeval(&curTime, &(ack->timestamp));
       if(dt > DATA_TIMEOUT_SEC) {//detected timeout
-	//TODO:implement congestion control
 	pool[peerID].timeoutCount++;
+	printf("data timeout. waiting for ack %d\n", getPacketSeq(ack));
 	if(pool[peerID].timeoutCount == 3){
-	  //cleanUpConnUp() has flaws
+	  printf("Receiver ID %d timed out 3 times. Closing connection\n", peerID);
 	  cleanUpConnUp(pool[peerID]);
 	  continue;
 	}
-	printf("data timeout. waiting for ack %d\n", getPacketSeq(ack));
 	shrinkWindow(&(pool[peerID].sw.ctrl));
 	mergeAtFront(pool[peerID].ackWaitQueue, pool[peerID].dataQueue);
       }
     }
+    pkt = peek(pool[peerID].dataQueue);
     while(pkt != NULL && 
 	  (getPacketSeq(pkt) <= pool[peerID].sw.lastPacketAvailable)) { 
       peerList_t *p = &(peerInfo.peerList[i]);
@@ -531,6 +533,7 @@ void flushUpload(int sock)
       pool[peerID].sw.lastPacketSent = getPacketSeq(pkt);
       enqueue(pool[peerID].ackWaitQueue, pkt);
       pkt = peek(pool[peerID].dataQueue);
+      printf("data queue size %d\n", pool[peerID].dataQueue->size);
     }
   }
 }
@@ -589,7 +592,7 @@ void flushDownload(int sock)
 				   0,
 				   (struct sockaddr *) & (p->addr),
 				   sizeof(p->addr));
-
+	
 	if(retVal == -1) {
 	  //TODO: this might not be the best solution
 	  newPacketWHOHAS(nonCongestQueue);
@@ -597,6 +600,7 @@ void flushDownload(int sock)
 	  cleanUpConnDown(pool[peerID]);
 	  return;
 	}
+	//getChunk.list[pool[peerID].curChunkID].fetchState = 2;
 	//Mark time
 	setPacketTime(pkt);
 	//Put it in timeoutQueue
@@ -615,8 +619,10 @@ void flushDownload(int sock)
 	setPacketTime(pkt);
 	if(pool[peerID].timeoutCount == 3){
 	  getChunk.list[pool[peerID].curChunkID].fetchState = 0;
+	  pool[peerID].state = 0;
 	  newPacketWHOHAS(nonCongestQueue);
 	  freePacket(pkt);
+	  //mergeAtFront(pool[peerID].timeoutQueue, pool[peerID].getQueue);
 	  cleanUpConnDown(pool[peerID]);
 	}
       }
@@ -644,7 +650,7 @@ void flushQueue(int sock, queue *sendQueue)
   }
   peerList_t *list = peerInfo.peerList;
   while(count > 0) {
-    printf("Sending Packet\n");
+    printf("Sending %d Packet\n", getPacketType(pkt));
     if(pkt->dest != NULL){ //IHAVE packets have specific destinations
       retVal = spiffy_sendto(sock,
 			     pkt->payload,

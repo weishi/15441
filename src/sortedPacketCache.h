@@ -10,4 +10,4 @@ typedef struct sortedPacketCache{
 sortedPacketCache * newCache(Packet* pkt, int seq);
 void insertInOrder(sortedPacketCache **head, Packet* pkt, int seq);
 Packet * removeHead(sortedPacketCache **head);
-int flushCache(int expected, queue* queue, sortedPacketCache *cache);
+int flushCache(int expected, queue* queue, sortedPacketCache **cache);

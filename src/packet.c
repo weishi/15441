@@ -139,7 +139,7 @@ void newPacketWHOHAS(queue *sendQueue)
 	num = getChunk.numChunk % MAX_HASH_PER_PACKET;
       }
       for(j = 0; j < num; j++) {
-	while(getChunk.list[pktIndex].fetchState
+	while(getChunk.list[pktIndex].fetchState == 1
 	      || (searchHash(getChunk.list[pktIndex].hash, &hasChunk, -1) >= 0)) {
 	  pktIndex++;
 	}
@@ -163,11 +163,13 @@ void newPacketGET(Packet *pkt, queue *getQueue)
         hash = getPacketHash(pkt, i);
         printHash(hash);
         idx = searchHash(hash, &getChunk, 0);
+	//printf("idx %d hashSeq %d getState %d\n", idx, getChunk.list[idx].seq, getChunk.list[idx].fetchState);
         //Only GET when chunk hasn't been fetched
-        if(getChunk.list[idx].fetchState == 0) {
-            getChunk.list[idx].fetchState = 2;
-            Packet *thisObj = newPacketSingleGET(hash);
-            enqueue(getQueue, (void *)thisObj);
+        if(idx >= 0 && getChunk.list[idx].fetchState == 0) {
+	  printf("geting chunk %d\n",getChunk.list[idx].seq);
+	  getChunk.list[idx].fetchState = 2;
+	  Packet *thisObj = newPacketSingleGET(hash);
+	  enqueue(getQueue, (void *)thisObj);
         }
     }
 }

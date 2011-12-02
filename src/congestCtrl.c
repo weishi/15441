@@ -35,8 +35,10 @@ void shrinkWindow(congestCtrler *ctrl){
   ctrl->slowInc = 0;
   ctrl->windowSize = 1;
   ctrl->mode = SLOW_START;
+  printf("Shrinking window from %d", ctrl->ssthresh);
   if((ctrl->ssthresh /= 2) < 2)
     ctrl->ssthresh = 2;
+  printf("to %d\n", ctrl->ssthresh);
 }
 
 /*Logging module*/

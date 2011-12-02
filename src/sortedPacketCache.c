@@ -38,12 +38,13 @@ Packet *removeHead(sortedPacketCache **head){
   return ret;
 }
 
-int flushCache(int expected, queue* qPtr, sortedPacketCache* cache){
+int flushCache(int expected, queue* qPtr, sortedPacketCache** cache){
   int newExpected = expected;
-  if(cache == NULL)
+  //printf("%p %d %p", cache, cache->seq, cache->next);
+  if(*cache == NULL)
     return ++expected;
-  while(cache->seq == ++newExpected){
-    enqueue(qPtr, removeHead(&cache));
+  while((*cache)->seq == ++newExpected){
+    enqueue(qPtr, removeHead(cache));
   }
   printf("old expected %d new expected %d\n", expected, newExpected);
   return newExpected;

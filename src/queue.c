@@ -54,21 +54,33 @@ void *peek(queue *qPtr)
 void mergeAtFront(queue *ins, queue *base)
 {
 	if(ins->head == NULL)
-		return;
-	if(base->head == NULL)
-		base = ins;
+	  return;
+	if(base->head == NULL){
+	  printf("merging to an empty quue\n");
+	  base->head = ins->head;
+	  base->tail = ins->tail;
+	  base->size = ins->size;
+	  ins->head = NULL;
+	  ins->tail = NULL;
+	  ins->size = 0;
+	  //ins = newqueue();
+	}
 	else {
-		ins->tail->next = base->head;
-		base->head = ins->head;
-		free(ins);
-		ins = newqueue();
+	  printf("mergint to an un-empty queue\n");
+	  ins->tail->next = base->head;
+	  base->head = ins->head;
+	  base->size += ins->size;
+	  ins->head = NULL;
+	  ins->tail = NULL;
+	  ins->size = 0;
+	  //ins = newqueue();
 	}
 }
 
 void clearQueue(queue *qPtr){
-	void* data = dequeue(qPtr);
-	while(data != NULL){
-		data = dequeue(qPtr);
-	}
+  void* data = dequeue(qPtr);
+  while(data != NULL){
+    data = dequeue(qPtr);
+  }
 }
 
