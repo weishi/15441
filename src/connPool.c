@@ -4,7 +4,6 @@ void cleanUpConnUp(connUp *conn){
   initSendWindow(&(conn->sw));
   clearQueue(conn->dataQueue);
   clearQueue(conn->ackWaitQueue);
-  conn->connected = 0;
   conn->timeoutCount = 0;
 }
 

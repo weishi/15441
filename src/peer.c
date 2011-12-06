@@ -51,7 +51,6 @@ void init(bt_config_t *config)
     int peerID = peerInfo.peerList[i].peerID;
     uploadPool[peerID].dataQueue = newqueue();
     uploadPool[peerID].ackWaitQueue = newqueue();
-    uploadPool[peerID].connected = 0;
     uploadPool[peerID].connID = 0;
     downloadPool[peerID].getQueue = newqueue();
     downloadPool[peerID].timeoutQueue = newqueue();
@@ -198,6 +197,7 @@ void handlePacket(Packet *pkt)
       printf("->GET\n");
       if(numConnUp == maxConn){//Cannot allow more connections
 	printf("->GET request denied.\n");
+	freePacket(pkt);
 	break;
       }
       numConnUp++;
@@ -208,13 +208,18 @@ void handlePacket(Packet *pkt)
 	the receiver is already sending out a new GET, assert the receiver has received
 	the last packet so abort the wait queue and re-initialize
       */
-      clearQueue(uploadPool[peerID].ackWaitQueue);
-      initWindows(&(downloadPool[peerID].rw), &(uploadPool[peerID].sw));
-      newPacketDATA(pkt, uploadPool[peerID].dataQueue);
-      //set start time
-      uploadPool[peerID].connID++;
-      gettimeofday(&(uploadPool[peerID].startTime), NULL);
-      printf("new data added to Q at peer %d\n", peerID);
+      if(downloadPool[peerID].connected == 0){
+	clearQueue(uploadPool[peerID].ackWaitQueue);
+	initWindows(&(downloadPool[peerID].rw), &(uploadPool[peerID].sw));
+	newPacketDATA(pkt, uploadPool[peerID].dataQueue);
+	//set start time
+	uploadPool[peerID].connID++;
+	gettimeofday(&(uploadPool[peerID].startTime), NULL);
+	printf("new data added to Q at peer %d\n", peerID);
+      } else {    
+	printf("Only one-way connection is allowed.\n");
+	freePacket(pkt);
+      }
       break;
     }
     case 3: { //DATA
@@ -222,6 +227,7 @@ void handlePacket(Packet *pkt)
       int peerIndex = searchPeer(&(pkt->src));
       int peerID = peerInfo.peerList[peerIndex].peerID;
       if(1 == updateGetSingleChunk(pkt, peerID)) {
+	downloadPool[peerID].connected = 0;
 	numConnDown--;
 	updateGetChunk();
       }
@@ -417,21 +423,22 @@ void process_inbound_udp(int sock)
 void process_get(char *chunkfile, char *outputfile)
 {
   printf("Handle GET (%s, %s)\n", chunkfile, outputfile);
-
+  if((fopen(chunkfile, "r") == NULL)){
+    fprintf(stderr, "Open file %s failed. (Mis-spelled?)\n", chunkfile);
+    return;
+  }
   fillChunkList(&getChunk, GET, chunkfile);
   if((getChunk.filePtr = fopen(outputfile, "w")) == NULL) {
-    fprintf(stderr, "Open file %s failed\n", outputfile);
+    fprintf(stderr, "Open file %s failed.\n", outputfile);
     exit(-1);
   }
   //TODO:only get chunks that I don't have
   printChunk(&getChunk);
   newPacketWHOHAS(nonCongestQueue);
-
 }
 
 void handle_user_input(char *line, void *cbdata)
 {
-  printf("Handling user input\n");
   char chunkf[128], outf[128];
   cbdata = cbdata;
   bzero(chunkf, sizeof(chunkf));
@@ -440,7 +447,6 @@ void handle_user_input(char *line, void *cbdata)
   if (sscanf(line, "GET %120s %120s", chunkf, outf)) {
     if (strlen(outf) > 0) {
       process_get(chunkf, outf);
-      //idle = 0;
     }
   }
 }
@@ -495,7 +501,6 @@ void peer_run(bt_config_t *config)
 	process_inbound_udp(sock);
       }
       if (FD_ISSET(STDIN_FILENO, &readfds) && idle == 1) {
-	printf("user input \n");
 	process_user_input(STDIN_FILENO,
 			   userbuf,
 			   handle_user_input,
@@ -547,13 +552,15 @@ void flushUpload(int sock)
       setPacketTime(pkt);
       printf("Sent data %d. last available %d\n", getPacketSeq(pkt), pool[peerID].sw.lastPacketAvailable);
       if(retVal == -1) { //DATA lost
-	break;
+	printf("spiffy_sendto() returned -1. Re-enqueuing data packet\n");
+	enqueue(pool[peerID].dataQueue, dequeue(pool[peerID].dataQueue));
+      } else {
+	dequeue(pool[peerID].dataQueue);
+	pool[peerID].sw.lastPacketSent = getPacketSeq(pkt);
+	enqueue(pool[peerID].ackWaitQueue, pkt);
+	pkt = peek(pool[peerID].dataQueue);
+	printf("data queue size %d\n", pool[peerID].dataQueue->size);
       }
-      dequeue(pool[peerID].dataQueue);
-      pool[peerID].sw.lastPacketSent = getPacketSeq(pkt);
-      enqueue(pool[peerID].ackWaitQueue, pkt);
-      pkt = peek(pool[peerID].dataQueue);
-      printf("data queue size %d\n", pool[peerID].dataQueue->size);
     }
   }
 }
@@ -587,7 +594,8 @@ void flushDownload(int sock)
 				 sizeof(p->addr));
       printf("Sent ack %d\n", getPacketAck(ack));
       if(retVal == -1) {
-	printf("Sending ACK failed\n");
+	printf("spiffy_sendto() returned -1. Re-enqueing ack packet.\n");
+	enqueue(pool[peerID].ackSendQueue, dequeue(pool[peerID].ackSendQueue));
       } else {
 	dequeue(pool[peerID].ackSendQueue);
 	freePacket(ack);
@@ -608,6 +616,9 @@ void flushDownload(int sock)
 	  pkt = dequeue(pool[peerID].getQueue);
 	} else if(numConnDown < maxConn){
 	  getChunk.list[idx].fetchState = 2;
+	  if(downloadPool[peerID].connected == 1)
+	    printf("NOT SUPPOSED TO BE CONNECTEED! \n\n\n\n\n\n");
+	  downloadPool[peerID].connected = 1;
 	  numConnDown++;
 	  break;
 	} else {//Cannot allow more download connections
@@ -637,10 +648,11 @@ void flushDownload(int sock)
 				   sizeof(p->addr));
 
 	if(retVal == -1) {
-	  //TODO: this might not be the best solution
+	  printf("spiffy_snetto() returned -1. Re-flushing the network with WHOHAS.\n");
 	  newPacketWHOHAS(nonCongestQueue);
 	  freePacket(pkt);
 	  cleanUpConnDown(&(pool[peerID]));
+	  numConnDown--;
 	  return;
 	}
 	//Mark time
@@ -685,8 +697,8 @@ void flushQueue(int sock, queue *sendQueue)
 {
   int i = 0;
   int retVal = -1;
-  int noLoss = 1; //for debug use only. get rid of it later
   int count = sendQueue->size;
+  int noLoss = 1;
   Packet *pkt = dequeue(sendQueue);
   if(pkt == NULL) {
     return;
@@ -711,22 +723,19 @@ void flushQueue(int sock, queue *sendQueue)
 				 (struct sockaddr *) & (list[i].addr),
 				 sizeof(list[i].addr));
 	  if(retVal == -1) {
-	    break;
+	    enqueue(sendQueue, pkt);
+	    noLoss = 1;
 	  }
 	}
       }
     }
-    if(retVal == -1) {
-      printf("Failed sending\n");
-      close(sock);
-    }
+    if(noLoss == 1) {
+      printf("There has been nonCongest packet loss (spiffy_sendto() returned -1.)"
+	     "New attempts will be made later");
+    } 
     freePacket(pkt);
     pkt = dequeue(sendQueue);
     count--;
-  }
-
-  if(noLoss) {
-    printf("All packets flushed from nonCongestQueue\n");
   }
 }
 
