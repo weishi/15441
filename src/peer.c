@@ -312,31 +312,31 @@ int updateGetSingleChunk(Packet *pkt, int peerID)
 
         /*Check if this GET finished */
         //TODO: This is a hack, should be change in CP2
-        if((rw->nextPacketExpected > BT_CHUNK_SIZE / PACKET_DATA_SIZE + 1)
-                && (downloadPool[peerID].ackSendQueue->size == 0)) {
-            printf("Asserting chunk finished downloading: next expected %d thresh %d\n", rw->nextPacketExpected, BT_CHUNK_SIZE / PACKET_DATA_SIZE + 1);
-            getChunk.list[curChunk].fetchState = 1;
-            downloadPool[peerID].state = 0;
-            /*Packet *clearPkt = dequeue(downloadPool[peerID].timeoutQueue);
-            while(clearPkt != NULL) {
-            	freePacket(clearPkt);
-            	clearPkt = dequeue(downloadPool[peerID].timeoutQueue);
-            	}*/
-            clearQueue(downloadPool[peerID].timeoutQueue);
-            //clearQueue(downloadPool[peerID].ackSendQueue);
-            initWindows(&(downloadPool[peerID].rw), &(uploadPool[peerID].sw));
-            printf("Chunk %d fetched\n", curChunk);
-            printf("%d More GETs in queue\n", downloadPool[peerID].getQueue->size);
-            return 1;//this GET is done
+        if(rw->nextPacketExpected > BT_CHUNK_SIZE / PACKET_DATA_SIZE + 1){
+	  clearQueue(downloadPool[peerID].timeoutQueue);
+	  printf("Asserting chunk finished downloading: next expected %d thresh %d\n", rw->nextPacketExpected, BT_CHUNK_SIZE / PACKET_DATA_SIZE + 1);
+	  getChunk.list[curChunk].fetchState = 1;
+	  downloadPool[peerID].state = 0;
+	  /*Packet *clearPkt = dequeue(downloadPool[peerID].timeoutQueue);
+	    while(clearPkt != NULL) {
+	    freePacket(clearPkt);
+	    clearPkt = dequeue(downloadPool[peerID].timeoutQueue);
+	    }*/
+	  clearQueue(downloadPool[peerID].timeoutQueue);
+	  //clearQueue(downloadPool[peerID].ackSendQueue);
+	  initWindows(&(downloadPool[peerID].rw), &(uploadPool[peerID].sw));
+	  printf("Chunk %d fetched\n", curChunk);
+	  printf("%d More GETs in queue\n", downloadPool[peerID].getQueue->size);
+	  return 1;//this GET is done
         } else {
-            return 0;
+	  return 0;
         }
     } else { //packet seq smaller than expected. Just send back ack.
-        printf("Received unexpected packet."
-               "Expecting %d received %d !",
-               rw->nextPacketExpected, seq);
-        newPacketACK(seq, downloadPool[peerID].ackSendQueue);
-        return 0;
+      printf("Received unexpected packet."
+	     "Expecting %d received %d !",
+	     rw->nextPacketExpected, seq);
+      newPacketACK(seq, downloadPool[peerID].ackSendQueue);
+      return 0;
     }
 }
 /* Check if all GETs are done */
