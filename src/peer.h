@@ -4,8 +4,9 @@
 #define MAX_NUM_CHUNK 1024
 #define MAX_NUM_PEER 1024
 #define MAX_LINE_SIZE 1024
-#define GET_TIMEOUT_SEC 5
-#define DATA_TIMEOUT_SEC 3
+#define GET_TIMEOUT_SEC 4
+#define DATA_TIMEOUT_SEC 4
+#define WHOHAS_TIMEOUT_SEC 5
 
 #include <sys/types.h>
 #include <arpa/inet.h>
@@ -46,11 +47,14 @@ extern chunkList hasChunk;
 extern chunkList getChunk;
 extern FILE *log_file;
 
+struct timeval globalTimer; //used for periodically ask for requests 
 int idle = 1;
 /* Connection */
 queue *nonCongestQueue;//For WHOHAS,IHAVE
 
 int maxConn;
+int numConnUp = 0;
+int numConnDown = 0;
 connUp uploadPool[MAX_NUM_PEER];
 connDown downloadPool[MAX_NUM_PEER];
 
@@ -73,5 +77,6 @@ int diffTimevalMilli(struct timeval *t1, struct timeval *t2);
 int updateGetSingleChunk(Packet *, int );
 void updateGetChunk();
 void updateACKQueue(Packet *, int);
+int checkTimer(struct timeval *tv, time_t sec);
 
 #endif

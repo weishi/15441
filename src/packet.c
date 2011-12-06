@@ -154,24 +154,27 @@ void newPacketWHOHAS(queue *sendQueue)
     }
 }
 
-void newPacketGET(Packet *pkt, queue *getQueue)
+int newPacketGET(Packet *pkt, queue *getQueue)
 {
-    uint8_t numHash = getPacketNumHash(pkt);
-    int i, idx;
-    uint8_t *hash;
-    for(i = 0; i < numHash; i++) {
-        hash = getPacketHash(pkt, i);
-        printHash(hash);
-        idx = searchHash(hash, &getChunk, -1);
-	printf("idx %d hashSeq %d getState %d\n", idx, getChunk.list[idx].seq, getChunk.list[idx].fetchState);
-        //Only GET when chunk hasn't been fetched
-        if(idx >= 0 && getChunk.list[idx].fetchState == 0) {
-	  printf("geting chunk %d\n",getChunk.list[idx].seq);
-	  //getChunk.list[idx].fetchState = 2;
-	  Packet *thisObj = newPacketSingleGET(hash);
-	  enqueue(getQueue, (void *)thisObj);
-        }
+  int ret = 0;
+  uint8_t numHash = getPacketNumHash(pkt);
+  int i, idx;
+  uint8_t *hash;
+  for(i = 0; i < numHash; i++) {
+    hash = getPacketHash(pkt, i);
+    printHash(hash);
+    idx = searchHash(hash, &getChunk, -1);
+    printf("idx %d hashSeq %d getState %d\n", idx, getChunk.list[idx].seq, getChunk.list[idx].fetchState);
+    //Only GET when chunk hasn't been fetched
+    if(idx >= 0 && getChunk.list[idx].fetchState == 0) {
+      printf("geting chunk %d\n",getChunk.list[idx].seq);
+      //getChunk.list[idx].fetchState = 2;
+      Packet *thisObj = newPacketSingleGET(hash);
+      enqueue(getQueue, (void *)thisObj);
+      ret = 1;
     }
+  }
+  return ret;
 }
 
 void newPacketACK(uint32_t ack, queue *ackSendQueue)

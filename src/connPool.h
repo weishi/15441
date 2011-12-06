@@ -17,13 +17,13 @@ typedef struct connUp{
 
 typedef struct connDown{
   //0:ready for next
-    //1:waiting
-    //2:downloading
+    //1:downloading
+    //2:waiting for connection
   recvWindow rw;
   int state; 
   int curChunkID;
   queue *getQueue;
-  queue *timeoutQueue;
+  queue *timeoutQueue; //GET request timeout queue
   queue *ackSendQueue;
   sortedPacketCache* cache;
   uint8_t connected;

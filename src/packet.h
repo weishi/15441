@@ -32,7 +32,7 @@ typedef struct Packet {
 Packet *newPacketFromBuffer(char *);
 Packet *newPacketDefault();
 void newPacketWHOHAS(queue *);
-void newPacketGET(Packet *,queue *);
+int newPacketGET(Packet *,queue *); //return 1 if a packet actually gets pushed into the getqueue and 0 otherwise
 void newPacketDATA(Packet *,queue *);
 void newPacketACK(uint32_t,queue *);
 Packet * newFreePacketACK(uint32_t);
