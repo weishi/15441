@@ -30,7 +30,7 @@ typedef struct connDown{
   uint8_t timeoutCount; // assert connection loss upon 3 consecutive timeouts
 }connDown;
 
-void cleanUpConnUp(connUp conn);
-void cleanUpConnDown(connDown conn);
+void cleanUpConnUp(connUp *conn);
+void cleanUpConnDown(connDown *conn);
 
 #endif

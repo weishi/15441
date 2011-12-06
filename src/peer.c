@@ -193,6 +193,11 @@ void handlePacket(Packet *pkt)
       printf("->GET\n");
       int peerIndex = searchPeer(&(pkt->src));
       int peerID = peerInfo.peerList[peerIndex].peerID;
+      //in case the sender has not received the final ack from the receiver but 
+      // the receiver is sending out a new get, assume the receiver has received
+      // the last packet so abort the wait queue and re-initialize
+      clearQueue(uploadPool[peerID].ackWaitQueue); 
+      initWindows(&(downloadPool[peerID].rw), &(uploadPool[peerID].sw));
       newPacketDATA(pkt, uploadPool[peerID].dataQueue);
       //set start time
       uploadPool[peerID].connID++;
@@ -235,16 +240,16 @@ void updateACKQueue(Packet *pkt, int peerID)
   queue *dataQueue = uploadPool[peerID].dataQueue;
   Packet *ackWait = peek(ackWaitQueue);
   struct timeval cur_time;
+  gettimeofday(&cur_time, NULL);
+  logger(peerID, uploadPool[peerID].connID, diffTimevalMilli(&cur_time, &(uploadPool[peerID].startTime)), sw->ctrl.windowSize);
+  expandWindow(&(sw->ctrl));
   uploadPool[peerID].timeoutCount = 0;
-  printf("Received ACK %d. Next in ackWaitQueue: %d\n", ack, getPacketSeq(ackWait));
+  printf("Received ACK %d. Last acked %d. Next in ackWaitQueue: %d\n", ack, sw->lastPacketAcked, ackWait == NULL ? 65535 : getPacketSeq(ackWait));
   if(ackWait != NULL){
     if(ack >= getPacketSeq(ackWait)){
       while(ackWait != NULL && ack >= getPacketSeq(ackWait)){
 	dequeue(ackWaitQueue);
 	freePacket(ackWait);
-	gettimeofday(&cur_time, NULL);
-	logger(peerID, uploadPool[peerID].connID, diffTimevalMilli(&cur_time, &(uploadPool[peerID].startTime)), sw->ctrl.windowSize);
-	expandWindow(&(sw->ctrl));
 	ackWait = peek(ackWaitQueue);
       }
       sw->lastPacketAcked = ack;
@@ -257,7 +262,7 @@ void updateACKQueue(Packet *pkt, int peerID)
 	assert(dequeue(ackWaitQueue) == NULL);
       }
     } else {//unexpected ACK ack number 
-      if(ack == sw->lastPacketAcked) { //duplicate ACK
+      if(ack == sw->lastPacketAcked) { //dupliate ACK
 	sw->dupCount++;
 	printf("Received duplicate packets %d\n", ack);
 	if(sw->dupCount == MAX_DUPLICATE){ //trigger fast retransmit
@@ -285,19 +290,15 @@ int updateGetSingleChunk(Packet *pkt, int peerID)
   uint32_t seq = (uint32_t)getPacketSeq(pkt);
   downloadPool[peerID].timeoutCount = 0;
   printf("Got pkt %d expecting %d\n", seq, rw->nextPacketExpected);
-  if(seq >= rw->nextPacketExpected){ //TODO: logic unfinished!
-    if(seq > rw->nextPacketExpected){
-      insertInOrder(&(downloadPool[peerID].cache), 
-		    newFreePacketACK(seq), seq);
+  if(seq >= rw->nextPacketExpected){
+    if((seq > rw->nextPacketExpected) && ((seq - rw->nextPacketExpected) <= 64)){//TODO: change this!
+      insertInOrder(&(downloadPool[peerID].cache), newFreePacketACK(seq), seq);
       //ASSERSION: under all cases the queue should be empty when this happens
       newPacketACK(rw->nextPacketExpected - 1, downloadPool[peerID].ackSendQueue);
-      
-    } else {
+    } else if(seq - rw->nextPacketExpected <= 64){//TODO: change this!
       newPacketACK(seq, downloadPool[peerID].ackSendQueue);
-      
-      printf("cache: %p\n", downloadPool[peerID].cache);
       rw->nextPacketExpected = 
-	flushCache(rw->nextPacketExpected, downloadPool[peerID].ackSendQueue, &downloadPool[peerID].cache);
+	flushCache(rw->nextPacketExpected, downloadPool[peerID].ackSendQueue, &(downloadPool[peerID].cache));
     }
     rw->lastPacketRead = seq;
     rw->lastPacketRcvd = seq;
@@ -306,19 +307,25 @@ int updateGetSingleChunk(Packet *pkt, int peerID)
     long offset = (seq - 1) * PACKET_DATA_SIZE + BT_CHUNK_SIZE * curChunk;
     FILE *of = getChunk.filePtr;
     printf("DataIn %d [%ld-%ld]\n", seq, offset, offset + dataSize);
-    fseek(of, offset, SEEK_SET);
-    fwrite(dataPtr, sizeof(uint8_t), dataSize, of);
+    if(of != NULL){
+      fseek(of, offset, SEEK_SET);
+      fwrite(dataPtr, sizeof(uint8_t), dataSize, of);
+    }
     
     /*Check if this GET finished */
-    //This is a hack, should be change in CP2
-    if(seq == BT_CHUNK_SIZE / PACKET_DATA_SIZE + 1) {
+    //TODO: This is a hack, should be change in CP2
+    if((rw->nextPacketExpected > BT_CHUNK_SIZE / PACKET_DATA_SIZE + 1)
+       && (downloadPool[peerID].ackSendQueue->size == 0)){
+      printf("Asserting chunk finished downloading: next expected %d thresh %d\n", rw->nextPacketExpected, BT_CHUNK_SIZE / PACKET_DATA_SIZE + 1);
       getChunk.list[curChunk].fetchState = 1;
       downloadPool[peerID].state = 0;
-      Packet *clearPkt = dequeue(downloadPool[peerID].timeoutQueue);
+      /*Packet *clearPkt = dequeue(downloadPool[peerID].timeoutQueue);
       while(clearPkt != NULL) {
 	freePacket(clearPkt);
 	clearPkt = dequeue(downloadPool[peerID].timeoutQueue);
-      }
+	}*/
+      clearQueue(downloadPool[peerID].timeoutQueue);
+      //clearQueue(downloadPool[peerID].ackSendQueue);
       initWindows(&(downloadPool[peerID].rw), &(uploadPool[peerID].sw));
       printf("Chunk %d fetched\n", curChunk);
       printf("%d More GETs in queue\n", downloadPool[peerID].getQueue->size);
@@ -328,10 +335,8 @@ int updateGetSingleChunk(Packet *pkt, int peerID)
     }
   }
   else {//packet seq smaller than expected. Just send back ack.
-    //TODO: implement this
     printf("Received unexpected packet."
-	   "Expecting %d received %d !"
-	   "Implement its handling!\n",
+	   "Expecting %d received %d !",
 	   rw->nextPacketExpected, seq);
     newPacketACK(seq, downloadPool[peerID].ackSendQueue);
     return 0;
@@ -351,6 +356,7 @@ void updateGetChunk()
   }
   if(done) {
     fclose(getChunk.filePtr);
+    getChunk.filePtr = NULL;
     printf("GOT %s\n", getChunk.getChunkFile);
     free(getChunk.getChunkFile);
     bzero(&getChunk, sizeof(getChunk));
@@ -507,7 +513,7 @@ void flushUpload(int sock)
 	printf("data timeout. waiting for ack %d\n", getPacketSeq(ack));
 	if(pool[peerID].timeoutCount == 3){
 	  printf("Receiver ID %d timed out 3 times. Closing connection\n", peerID);
-	  cleanUpConnUp(pool[peerID]);
+	  cleanUpConnUp(&(pool[peerID]));
 	  continue;
 	}
 	shrinkWindow(&(pool[peerID].sw.ctrl));
@@ -541,6 +547,8 @@ void flushUpload(int sock)
 void flushDownload(int sock)
 {
   int i = 0;
+  int idx;
+  uint8_t* hash;
   Packet *pkt;
   connDown *pool = downloadPool;
   for(i = 0; i < peerInfo.numPeer; i++) {
@@ -576,10 +584,25 @@ void flushDownload(int sock)
     switch(pool[peerID].state) {
     case 0://Ready for next
       pkt = dequeue(pool[peerID].getQueue);
+      while(pkt != NULL){
+	hash = getPacketHash(pkt, 0);
+	printHash(hash);
+	idx = searchHash(hash, &getChunk, 0);
+	printf("Search returned %d\n", idx);
+	if(idx == -1){ //someone else is sending or has sent this chunk
+	  freePacket(pkt); 
+	  pkt = dequeue(pool[peerID].getQueue);
+	}
+	else{
+	  getChunk.list[idx].fetchState = 2;
+	  break;
+	}
+      }
+      
       if(pkt != NULL) {
 	printf("Sending a GET\n");
 	peerList_t *p = &(peerInfo.peerList[i]);
-	uint8_t *hash = pkt->payload + 16;
+	hash = pkt->payload + 16;
 	char buf[50];
 	bzero(buf, 50);
 	binary2hex(hash, 20, buf);
@@ -597,7 +620,7 @@ void flushDownload(int sock)
 	  //TODO: this might not be the best solution
 	  newPacketWHOHAS(nonCongestQueue);
 	  freePacket(pkt);
-	  cleanUpConnDown(pool[peerID]);
+	  cleanUpConnDown(&(pool[peerID]));
 	  return;
 	}
 	//getChunk.list[pool[peerID].curChunkID].fetchState = 2;
@@ -623,7 +646,7 @@ void flushDownload(int sock)
 	  newPacketWHOHAS(nonCongestQueue);
 	  freePacket(pkt);
 	  //mergeAtFront(pool[peerID].timeoutQueue, pool[peerID].getQueue);
-	  cleanUpConnDown(pool[peerID]);
+	  cleanUpConnDown(&(pool[peerID]));
 	}
       }
       break;

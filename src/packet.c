@@ -162,12 +162,12 @@ void newPacketGET(Packet *pkt, queue *getQueue)
     for(i = 0; i < numHash; i++) {
         hash = getPacketHash(pkt, i);
         printHash(hash);
-        idx = searchHash(hash, &getChunk, 0);
-	//printf("idx %d hashSeq %d getState %d\n", idx, getChunk.list[idx].seq, getChunk.list[idx].fetchState);
+        idx = searchHash(hash, &getChunk, -1);
+	printf("idx %d hashSeq %d getState %d\n", idx, getChunk.list[idx].seq, getChunk.list[idx].fetchState);
         //Only GET when chunk hasn't been fetched
         if(idx >= 0 && getChunk.list[idx].fetchState == 0) {
 	  printf("geting chunk %d\n",getChunk.list[idx].seq);
-	  getChunk.list[idx].fetchState = 2;
+	  //getChunk.list[idx].fetchState = 2;
 	  Packet *thisObj = newPacketSingleGET(hash);
 	  enqueue(getQueue, (void *)thisObj);
         }
@@ -283,8 +283,10 @@ uint8_t getPacketNumHash(Packet *pkt)
 uint8_t *getPacketHash(Packet *pkt, int i)
 {
     int type = getPacketType(pkt);
-    if(type == 0 || type == 1 || type == 2) {
-        return pkt->payload + 20 + SHA1_HASH_SIZE * i;
+    if(type == 0 || type == 1){ //WHOHAS and IHAVE
+      return pkt->payload + 20 + SHA1_HASH_SIZE * i;
+    } else if (type == 2){ //GET
+      return pkt->payload + 16 + SHA1_HASH_SIZE * i;
     } else {
         return NULL;
     }

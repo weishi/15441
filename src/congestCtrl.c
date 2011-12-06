@@ -45,8 +45,8 @@ void shrinkWindow(congestCtrler *ctrl){
 void logger(int peerID, uint32_t connID, int timeDif, int windowSize)
 {
   if(log_file)
-    fprintf(log_file, "%d%d   %d   %d\n", peerID, connID, timeDif, windowSize);
+    fprintf(log_file, "f%d%d   %d   %d\n", peerID, connID, timeDif, windowSize);
   else
-    fprintf(stderr, "%d%d   %d   %d\n", peerID, connID, timeDif, windowSize);
+    fprintf(stderr, "f%d%d\t%d\t%d\n", peerID, connID, timeDif, windowSize);
   //fflush(log_file);
 }

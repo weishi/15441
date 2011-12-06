@@ -14,16 +14,20 @@ void insertInOrder(sortedPacketCache **head, Packet* pkt, int seq){
   sortedPacketCache* cache = newCache(pkt, seq);
   sortedPacketCache* cur = *head;
   
-  if(cur == NULL || seq < cur->seq){
+  if(cur == NULL){
     cache->next = cur;
     *head = cache;
     return;
   }
   while(cur != NULL){
-    if(seq > cur->seq){
+    if(cur->next == NULL){
+      cur->next = cache;
+      break;
+    }
+    if(seq < cur->next->seq){
       cache->next = cur->next;
       cur->next = cache;
-      return;
+      break;
     }
     cur = cur->next;
   }
@@ -39,14 +43,34 @@ Packet *removeHead(sortedPacketCache **head){
 }
 
 int flushCache(int expected, queue* qPtr, sortedPacketCache** cache){
-  int newExpected = expected;
-  //printf("%p %d %p", cache, cache->seq, cache->next);
+  printf("flushing cache");
+  int newExpected = expected + 1;
   if(*cache == NULL)
     return ++expected;
-  while((*cache)->seq == ++newExpected){
+  sortedPacketCache* tmp = *cache;
+  while(tmp != NULL){
+    printf("Cache seq %d ", tmp->seq);
+    tmp = tmp->next;
+  }
+  printf("\n");
+  
+  while(*cache != NULL && (*cache)->seq <= newExpected){
+    if((*cache)->seq == newExpected)
+      newExpected++;
     enqueue(qPtr, removeHead(cache));
   }
+  tmp  = *cache;
+  while(tmp != NULL){
+    printf("After Cache seq %d ", tmp->seq);
+    tmp = tmp->next;
+  }
+  printf("\n");
   printf("old expected %d new expected %d\n", expected, newExpected);
   return newExpected;
+}
+
+void clearCache(sortedPacketCache **cache){
+  while((*cache) != NULL)
+    removeHead(cache);
 }
 
