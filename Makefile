@@ -24,15 +24,22 @@ OBJS+=queue.o
 OBJS+=packet.o
 OBJS+=congestCtrl.o
 OBJS+=sortedPacketCache.o
-BINS = peer make-chunks
+BINS = peer make-chunks zmq_bridge
+
+ECOBJS=zmqBridge.o
+ECOBJS+=queue.o
 
 $(SOURCE)/%.o: %.c
 	$(build-cmd)
+
 
 default: peer clean-o 
 
 peer: $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $@ $(LDFLAGS)
+
+ec : $(ECOBJS)
+	$(CC) $(CFLAGS) $(ECOBJS) -o zmq_bridge $(LDFLAGS) -lzmq
 
 clean-o:
 	rm -f *.o
