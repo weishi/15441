@@ -1,5 +1,4 @@
 #include "sortedPacketCache.h"
-#include "queue.h"
 
 sortedPacketCache *newCache(Packet* pkt, int seq){
   sortedPacketCache* cache = malloc(sizeof(sortedPacketCache));

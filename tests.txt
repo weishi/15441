@@ -19,9 +19,14 @@ Test methods
 
     Not yet
 
++ Packet loss test
+
+    Use spiffy to simulate different bandwidth and packet drop. Test if 
+    client handles timeout correctly by reading the window size graph.
+
 + Stress test
                           
-   1) Run multiple GET requests
+   1) Run multiple GET requests with different hosts.
    
    2) Kill and restart 1 client but keep the other running
 
