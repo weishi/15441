@@ -11,7 +11,7 @@ int verifyPacket(Packet *pkt)
 {
     uint16_t magic = getPacketMagic(pkt);
     uint8_t version = getPacketVersion(pkt);
-
+    
     if(magic == 15441 && version == 1) {
         return 1;
     } else {
@@ -168,7 +168,6 @@ int newPacketGET(Packet *pkt, queue *getQueue)
     //Only GET when chunk hasn't been fetched
     if(idx >= 0 && getChunk.list[idx].fetchState == 0) {
       printf("geting chunk %d\n",getChunk.list[idx].seq);
-      //getChunk.list[idx].fetchState = 2;
       Packet *thisObj = newPacketSingleGET(hash);
       enqueue(getQueue, (void *)thisObj);
       ret = 1;
@@ -194,24 +193,24 @@ Packet *newFreePacketACK(uint32_t ack){
 
 void newPacketDATA(Packet *pkt, queue *dataQueue)
 {
-    uint8_t *hash = pkt->payload + 16;
-    int idx = searchHash(hash, &masterChunk, -1);
-    Packet *newPkt;
-    if(idx >= 0) {
-        int i = 0;
-        int numPacket = BT_CHUNK_SIZE / PACKET_DATA_SIZE;
-        if(BT_CHUNK_SIZE % PACKET_DATA_SIZE > 0) {
-            numPacket++;
-        }
-        for(i = 0; i < numPacket; i++) {
-            if(i == numPacket - 1) {
-                newPkt = newPacketSingleDATA(i + 1, idx, BT_CHUNK_SIZE % PACKET_DATA_SIZE);
-            } else {
-                newPkt = newPacketSingleDATA(i + 1, idx, PACKET_DATA_SIZE);
-            }
-            enqueue(dataQueue, newPkt);
-        }
+  uint8_t *hash = pkt->payload + 16;
+  int idx = searchHash(hash, &masterChunk, -1);
+  Packet *newPkt;
+  if(idx >= 0) {
+    int i = 0;
+    int numPacket = BT_CHUNK_SIZE / PACKET_DATA_SIZE;
+    if(BT_CHUNK_SIZE % PACKET_DATA_SIZE > 0) {
+      numPacket++;
     }
+    for(i = 0; i < numPacket; i++) {
+      if(i == numPacket - 1) {
+	newPkt = newPacketSingleDATA(i + 1, idx, BT_CHUNK_SIZE % PACKET_DATA_SIZE);
+      } else {
+	newPkt = newPacketSingleDATA(i + 1, idx, PACKET_DATA_SIZE);
+      }
+      enqueue(dataQueue, newPkt);
+    }
+  }
 }
 
 Packet *newPacketSingleDATA(int seqNo, int seqChunk, size_t size)
@@ -230,14 +229,12 @@ Packet *newPacketSingleDATA(int seqNo, int seqChunk, size_t size)
     fseek(mf, offset, SEEK_SET);
     retSize = fread(pkt->payload + 16, sizeof(uint8_t), size, mf);
     if(retSize != size) {
-        printf("IO Error reading chunk\n");
-        freePacket(pkt);
-        return NULL;
+      printf("IO Error reading chunk\n");
+      freePacket(pkt);
+      return NULL;
     } else {
-        //printf("DataOut %d [%ld-%ld]\n", seqNo, offset, offset + size);
-        return pkt;
+      return pkt;
     }
-
 }
 
 Packet *newPacketSingleGET(uint8_t *hash)

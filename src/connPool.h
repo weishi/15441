@@ -17,8 +17,8 @@ typedef struct connUp{
 
 typedef struct connDown{
   //0:ready for next
-    //1:downloading
-    //2:waiting for connection
+  //1:downloading
+  //2:waiting for connection
   recvWindow rw;
   int state; 
   int curChunkID;

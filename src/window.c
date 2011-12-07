@@ -8,9 +8,9 @@ void initWindows(recvWindow *rw, sendWindow *sw)
 
 void initRecvWindow(recvWindow *rw)
 {
-    rw->lastPacketRead = 0;
-    rw->lastPacketRcvd = 0;
-    rw->nextPacketExpected = 1;
+  rw->lastPacketRead = 0;
+  rw->lastPacketRcvd = 0;
+  rw->nextPacketExpected = 1;
 }
 
 void initSendWindow(sendWindow *sw)

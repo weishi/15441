@@ -47,7 +47,6 @@ extern chunkList hasChunk;
 extern chunkList getChunk;
 extern FILE *log_file;
 
-struct timeval globalTimer; //used for periodically ask for requests 
 int idle = 1;
 /* Connection */
 queue *nonCongestQueue;//For WHOHAS,IHAVE

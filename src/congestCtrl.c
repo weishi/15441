@@ -12,7 +12,7 @@ void initCongestCtrler(congestCtrler *ctrl){
   printf("initing congest ctrl\n");
   ctrl->mode = SLOW_START;
   ctrl->windowSize = 1;
-  ctrl->ssthresh = 64;
+  ctrl->ssthresh = INIT_THRESH;
   ctrl->slowInc = 0;
 }
 
@@ -48,5 +48,4 @@ void logger(int peerID, uint32_t connID, int timeDif, int windowSize)
     fprintf(log_file, "f%d%d   %d   %d\n", peerID, connID, timeDif, windowSize);
   else
     fprintf(stderr, "f%d%d\t%d\t%d\n", peerID, connID, timeDif, windowSize);
-  //fflush(log_file);
 }
