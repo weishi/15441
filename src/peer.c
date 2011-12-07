@@ -266,6 +266,7 @@ void updateACKQueue(Packet *pkt, int peerID)
   printf("Received ACK %d. Last acked %d. Next in ackWaitQueue: %d\n", ack, sw->lastPacketAcked, ackWait == NULL ? 65535 : getPacketSeq(ackWait));
   if(ackWait != NULL) {
     if(ack >= getPacketSeq(ackWait)) {
+      sw->dupCount = 0;
       while(ackWait != NULL && ack >= getPacketSeq(ackWait)) {
 	dequeue(ackWaitQueue);
 	freePacket(ackWait);
@@ -287,6 +288,7 @@ void updateACKQueue(Packet *pkt, int peerID)
 	printf("Received duplicate packets %d\n", ack);
 	if(sw->dupCount == MAX_DUPLICATE) { //trigger fast retransmit
 	  printf("Received 3 duplicates acks %d retransmitting\n", ack);
+	  sw->dupCount = 0;
 	  mergeAtFront(ackWaitQueue, dataQueue);
 	  shrinkWindow(&(sw->ctrl));
 	}
@@ -535,6 +537,7 @@ void flushUpload(int sock)
 	  cleanUpConnUp(&(pool[peerID]));
 	  continue;
 	}
+	printf("Data timed out. Shrinking window.\n");
 	shrinkWindow(&(pool[peerID].sw.ctrl));
 	mergeAtFront(pool[peerID].ackWaitQueue, pool[peerID].dataQueue);
       }
