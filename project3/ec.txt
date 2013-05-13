@@ -1,0 +1,31 @@
+Extra credit write up
+
+SUB-->UDP1-->UDP2-->PUB
+
+Those 4 ports a multiplexed with zmq_poll();
+
+SUB:
+    bind and wait for incoming data
+
+PUB:
+    bind and wait for data from UDP2
+
+UDP1:
+    Upon recving message from SUB, it chops the message into 
+    1500 chunks. Then it builds a queue of those chunks, and 
+    sends them one at a time while waiting for ACKs
+
+UDP2:
+    Upon recving chunks from UDP1, it fills that data in a 
+    new message, and replies with ACK. Once recv'ed size
+    equals the total size, it sends the message to PUB
+
+Packet diagram:
+_______________________
+| ID            4 bytes| 
+| size          4 Bytes|
+| Total Size    4 Bytes|
+| isACK         4 Bytes|
+| Payload       N Bytes|
+-----------------------
+

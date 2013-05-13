@@ -1,0 +1,6 @@
+1. Loads 1 chunk into memeory all at once. Will cause trouble if chunk size is huge.
+
+2. Detecting end of DATA transfer is not satisfactory.
+
+3. If the router queue size is relativly small given the bandwidth, the sender might receive more than 3 duplicate packets for 1 lost packet
+   due to the delay, and therefore shrinked the window size more than once. 
